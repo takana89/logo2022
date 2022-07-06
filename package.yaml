@@ -25,6 +25,7 @@ dependencies:
 - bytestring
 - utf8-string
 - hspec
+- gloss
 
 library:
   source-dirs: src
