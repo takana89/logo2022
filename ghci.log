@@ -1,0 +1,795 @@
+Stack has not been tested with GHC versions above 9.0, and using 9.2.4, this may fail
+Stack has not been tested with Cabal versions above 3.4, but version 3.6.3.0 was found, this may fail
+GHCi, version 9.2.4: https://www.haskell.org/ghc/  :? for help
+Loaded GHCi configuration from /home/nanaka/logo2022/.ghci
+2022-09-22 18:35:57.47952197
+>>> :e
+No files to edit.
+2022-09-22 18:36:39.015195264
+>>> :e src/World.hs
+   1  {-# LANGUAGE DuplicateRecordFields #-}
+   2  {-# LANGUAGE NoFieldSelectors #-}
+   3  {-# LANGUAGE OverloadedRecordDot #-}
+   4  module World where
+   5  
+   6  import Graphics.Gloss
+   7  import Graphics.Gloss.Data.Point
+   8  import Graphics.Gloss.Data.Point.Arithmetic
+   9  import Graphics.Gloss.Data.Vector
+  10  import Graphics.Gloss.Geometry.Angle
+  11  
+  12  data World
+  13      = World
+  14      { turtle :: Turtle
+  15      , pict   :: Picture 
+  16      }
+  17      deriving (Eq, Show)
+  18  
+  19  data Turtle
+  20      = Turtle
+  21      { position :: Point
+  22      , direction :: Float
+  23      , pen :: Updown
+  24      , thic :: Float
+  25      , color :: Color
+  26      , showme :: Bool
+  27      }
+  28      deriving (Eq, Show)
+  29  
+  30  data Updown
+  31      = Up
+  32      | Down
+  33      deriving (Eq, Show)
+  34  
+  35  --
+  36  
+  37  type Instruction = World -> World
+  38  
+  39  forward :: Float -> Instruction
+  40  forward d world = undefined
+  41  
+  42  newpos :: Float -> Float -> Point -> Point
+  43  newpos dir d (x0,y0) = (x0+dx,y0+dy)
+  44      where
+  45          dx = d * cos a
+  46          dy = d * sin a 
+  47          a = degToRad (90 - dir)
+Ok, no modules loaded.
+2022-09-22 18:37:05.441262
+>>> :l src/World.hs
+[1 of 1] Compiling World            ( src/World.hs, interpreted )
+
+src/World.hs:43:27: error:
+    Ambiguous occurrence ‘+’
+    It could refer to
+       either ‘Prelude.+’,
+              imported from ‘Prelude’ at src/World.hs:4:8-12
+              (and originally defined in ‘GHC.Num’)
+           or ‘Graphics.Gloss.Data.Point.Arithmetic.+’,
+              imported from ‘Graphics.Gloss.Data.Point.Arithmetic’ at src/World.hs:8:1-43
+   |
+43 | newpos dir d (x0,y0) = (x0+dx,y0+dy)
+   |                           ^
+
+src/World.hs:43:33: error:
+    Ambiguous occurrence ‘+’
+    It could refer to
+       either ‘Prelude.+’,
+              imported from ‘Prelude’ at src/World.hs:4:8-12
+              (and originally defined in ‘GHC.Num’)
+           or ‘Graphics.Gloss.Data.Point.Arithmetic.+’,
+              imported from ‘Graphics.Gloss.Data.Point.Arithmetic’ at src/World.hs:8:1-43
+   |
+43 | newpos dir d (x0,y0) = (x0+dx,y0+dy)
+   |                                 ^
+
+src/World.hs:45:16: error:
+    Ambiguous occurrence ‘*’
+    It could refer to
+       either ‘Prelude.*’,
+              imported from ‘Prelude’ at src/World.hs:4:8-12
+              (and originally defined in ‘GHC.Num’)
+           or ‘Graphics.Gloss.Data.Point.Arithmetic.*’,
+              imported from ‘Graphics.Gloss.Data.Point.Arithmetic’ at src/World.hs:8:1-43
+   |
+45 |         dx = d * cos a
+   |                ^
+
+src/World.hs:46:16: error:
+    Ambiguous occurrence ‘*’
+    It could refer to
+       either ‘Prelude.*’,
+              imported from ‘Prelude’ at src/World.hs:4:8-12
+              (and originally defined in ‘GHC.Num’)
+           or ‘Graphics.Gloss.Data.Point.Arithmetic.*’,
+              imported from ‘Graphics.Gloss.Data.Point.Arithmetic’ at src/World.hs:8:1-43
+   |
+46 |         dy = d * sin a 
+   |                ^
+
+src/World.hs:47:26: error:
+    Ambiguous occurrence ‘-’
+    It could refer to
+       either ‘Prelude.-’,
+              imported from ‘Prelude’ at src/World.hs:4:8-12
+              (and originally defined in ‘GHC.Num’)
+           or ‘Graphics.Gloss.Data.Point.Arithmetic.-’,
+              imported from ‘Graphics.Gloss.Data.Point.Arithmetic’ at src/World.hs:8:1-43
+   |
+47 |         a = degToRad (90 - dir)
+   |                          ^
+Failed, no modules loaded.
+2022-09-22 18:37:05.629054474
+>>> :e
+   1  {-# LANGUAGE DuplicateRecordFields #-}
+   2  {-# LANGUAGE NoFieldSelectors #-}
+   3  {-# LANGUAGE OverloadedRecordDot #-}
+   4  module World where
+   5  
+   6  import Graphics.Gloss
+   7  import Graphics.Gloss.Data.Point
+   8  import qualified Graphics.Gloss.Data.Point.Arithmetic as G
+   9  import Graphics.Gloss.Data.Vector
+  10  import Graphics.Gloss.Geometry.Angle
+  11  
+  12  data World
+  13      = World
+  14      { turtle :: Turtle
+  15      , pict   :: Picture 
+  16      }
+  17      deriving (Eq, Show)
+  18  
+  19  data Turtle
+  20      = Turtle
+  21      { position :: Point
+  22      , direction :: Float
+  23      , pen :: Updown
+  24      , thic :: Float
+  25      , color :: Color
+  26      , showme :: Bool
+  27      }
+  28      deriving (Eq, Show)
+  29  
+  30  data Updown
+  31      = Up
+  32      | Down
+  33      deriving (Eq, Show)
+  34  
+  35  --
+  36  
+  37  type Instruction = World -> World
+  38  
+  39  forward :: Float -> Instruction
+  40  forward d world = undefined
+  41  
+  42  newpos :: Float -> Float -> Point -> Point
+  43  newpos dir d (x0,y0) = (x0+dx,y0+dy)
+  44      where
+  45          dx = d * cos a
+  46          dy = d * sin a 
+  47          a = degToRad (90 - dir)
+[1 of 1] Compiling World            ( src/World.hs, interpreted )
+Ok, one module loaded.
+2022-09-22 18:38:51.05905639
+>>> :e
+   1  {-# LANGUAGE DuplicateRecordFields #-}
+   2  {-# LANGUAGE NoFieldSelectors #-}
+   3  {-# LANGUAGE OverloadedRecordDot #-}
+   4  module World where
+   5  
+   6  import Graphics.Gloss
+   7  import Graphics.Gloss.Data.Point
+   8  import qualified Graphics.Gloss.Data.Point.Arithmetic as G
+   9  import Graphics.Gloss.Data.Vector
+  10  import Graphics.Gloss.Geometry.Angle
+  11  
+  12  data World
+  13      = World
+  14      { turtle :: Turtle
+  15      , pict   :: Picture 
+  16      }
+  17      deriving (Eq, Show)
+  18  
+  19  data Turtle
+  20      = Turtle
+  21      { position :: Point
+  22      , direction :: Float
+  23      , pen :: Updown
+  24      , thic :: Float
+  25      , color :: Color
+  26      , showme :: Bool
+  27      }
+  28      deriving (Eq, Show)
+  29  
+  30  data Updown
+  31      = Up
+  32      | Down
+  33      deriving (Eq, Show)
+  34  
+  35  --
+  36  
+  37  type Instruction = World -> World
+  38  
+  39  forward :: Float -> Instruction
+  40  forward d world = undefined
+  41  
+  42  newpos :: Float -> Float -> Point -> Point
+  43  newpos dir d pos0 = pos0 G.+ diff
+  44      where
+  45          diff = d * unitVectorAtAngle a
+  46          a = degToRad (90 - dir)
+[1 of 1] Compiling World            ( src/World.hs, interpreted )
+
+src/World.hs:43:30: error:
+    • Couldn't match type ‘Float’ with ‘(Float, Float)’
+      Expected: Point
+        Actual: Float
+    • In the second argument of ‘(G.+)’, namely ‘diff’
+      In the expression: pos0 G.+ diff
+      In an equation for ‘newpos’:
+          newpos dir d pos0
+            = pos0 G.+ diff
+            where
+                diff = d * unitVectorAtAngle a
+                a = degToRad (90 - dir)
+   |
+43 | newpos dir d pos0 = pos0 G.+ diff
+   |                              ^^^^
+
+src/World.hs:45:20: error:
+    • Couldn't match type ‘(Float, Float)’ with ‘Float’
+      Expected: Float
+        Actual: Vector
+    • In the second argument of ‘(*)’, namely ‘unitVectorAtAngle a’
+      In the expression: d * unitVectorAtAngle a
+      In an equation for ‘diff’: diff = d * unitVectorAtAngle a
+   |
+45 |         diff = d * unitVectorAtAngle a
+   |                    ^^^^^^^^^^^^^^^^^^^
+Failed, no modules loaded.
+2022-09-22 18:49:21.269130963
+>>> :e
+   1  {-# LANGUAGE DuplicateRecordFields #-}
+   2  {-# LANGUAGE NoFieldSelectors #-}
+   3  {-# LANGUAGE OverloadedRecordDot #-}
+   4  module World where
+   5  
+   6  import Graphics.Gloss
+   7  import Graphics.Gloss.Data.Point
+   8  import qualified Graphics.Gloss.Data.Point.Arithmetic as G
+   9  import Graphics.Gloss.Data.Vector
+  10  import Graphics.Gloss.Geometry.Angle
+  11  
+  12  data World
+  13      = World
+  14      { turtle :: Turtle
+  15      , pict   :: Picture 
+  16      }
+  17      deriving (Eq, Show)
+  18  
+  19  data Turtle
+  20      = Turtle
+  21      { position :: Point
+  22      , direction :: Float
+  23      , pen :: Updown
+  24      , thic :: Float
+  25      , color :: Color
+  26      , showme :: Bool
+  27      }
+  28      deriving (Eq, Show)
+  29  
+  30  data Updown
+  31      = Up
+  32      | Down
+  33      deriving (Eq, Show)
+  34  
+  35  --
+  36  
+  37  type Instruction = World -> World
+  38  
+  39  forward :: Float -> Instruction
+  40  forward d world = undefined
+  41  
+  42  newpos :: Float -> Float -> Point -> Point
+  43  newpos dir d pos0 = pos0 G.+ diff
+  44      where
+  45          diff = d G.* unitVectorAtAngle a
+  46          a = degToRad (90 - dir)
+[1 of 1] Compiling World            ( src/World.hs, interpreted )
+Ok, one module loaded.
+2022-09-22 18:49:58.474627213
+>>> newpos 60 100 (0,0)
+(86.60254,50.0)
+2022-09-22 18:50:40.69626653
+>>> :e
+   1  {-# LANGUAGE DuplicateRecordFields #-}
+   2  {-# LANGUAGE NoFieldSelectors #-}
+   3  {-# LANGUAGE OverloadedRecordDot #-}
+   4  module World where
+   5  
+   6  import Graphics.Gloss
+   7  import Graphics.Gloss.Data.Point
+   8  import qualified Graphics.Gloss.Data.Point.Arithmetic as G
+   9  import Graphics.Gloss.Data.Vector
+  10  import Graphics.Gloss.Geometry.Angle
+  11  
+  12  data World
+  13      = World
+  14      { turtle :: Turtle
+  15      , pict   :: Picture 
+  16      }
+  17      deriving (Eq, Show)
+  18  
+  19  data Turtle
+  20      = Turtle
+  21      { position :: Point
+  22      , direction :: Float
+  23      , pen :: Updown
+  24      , thic :: Float
+  25      , color :: Color
+  26      , showme :: Bool
+  27      }
+  28      deriving (Eq, Show)
+  29  
+  30  data Updown
+  31      = Up
+  32      | Down
+  33      deriving (Eq, Show)
+  34  
+  35  --
+  36  
+  37  type Instruction = World -> World
+  38  
+  39  forward :: Float -> Instruction
+  40  forward d world = world { turtle = turtle { position = newpos turtle.direction d turtle.position }}
+  41  
+  42  newpos :: Float -> Float -> Point -> Point
+  43  newpos dir d pos0 = pos0 G.+ diff
+  44      where
+  45          diff = d G.* unitVectorAtAngle a
+  46          a = degToRad (90 - dir)
+[1 of 1] Compiling World            ( src/World.hs, interpreted )
+
+src/World.hs:40:36: error:
+    • Variable not in scope: turtle :: Turtle
+    • Perhaps you meant data constructor ‘Turtle’ (line 20)
+      NB: ‘turtle’ is a field selector belonging to the type ‘World’
+      that has been suppressed by NoFieldSelectors
+   |
+40 | forward d world = world { turtle = turtle { position = newpos turtle.direction d turtle.position }}
+   |                                    ^^^^^^
+
+src/World.hs:40:63: error:
+    • Variable not in scope: turtle
+    • Perhaps you meant data constructor ‘Turtle’ (line 20)
+      NB: ‘turtle’ is a field selector belonging to the type ‘World’
+      that has been suppressed by NoFieldSelectors
+   |
+40 | forward d world = world { turtle = turtle { position = newpos turtle.direction d turtle.position }}
+   |                                                               ^^^^^^
+
+src/World.hs:40:82: error:
+    • Variable not in scope: turtle
+    • Perhaps you meant data constructor ‘Turtle’ (line 20)
+      NB: ‘turtle’ is a field selector belonging to the type ‘World’
+      that has been suppressed by NoFieldSelectors
+   |
+40 | forward d world = world { turtle = turtle { position = newpos turtle.direction d turtle.position }}
+   |                                                                                  ^^^^^^
+Failed, no modules loaded.
+2022-09-22 18:59:22.556982559
+>>> :e
+   1  {-# LANGUAGE DuplicateRecordFields #-}
+   2  {-# LANGUAGE NoFieldSelectors #-}
+   3  {-# LANGUAGE OverloadedRecordDot #-}
+   4  module World where
+   5  
+   6  import Graphics.Gloss
+   7  import Graphics.Gloss.Data.Point
+   8  import qualified Graphics.Gloss.Data.Point.Arithmetic as G
+   9  import Graphics.Gloss.Data.Vector
+  10  import Graphics.Gloss.Geometry.Angle
+  11  
+  12  data World
+  13      = World
+  14      { turtle :: Turtle
+  15      , pict   :: Picture 
+  16      }
+  17      deriving (Eq, Show)
+  18  
+  19  data Turtle
+  20      = Turtle
+  21      { position :: Point
+  22      , direction :: Float
+  23      , pen :: Updown
+  24      , thic :: Float
+  25      , color :: Color
+  26      , showme :: Bool
+  27      }
+  28      deriving (Eq, Show)
+  29  
+  30  data Updown
+  31      = Up
+  32      | Down
+  33      deriving (Eq, Show)
+  34  
+  35  --
+  36  
+  37  type Instruction = World -> World
+  38  
+  39  forward :: Float -> Instruction
+  40  forward d world = case world of
+  41      World { turtle = turtle } -> world { turtle = turtle { position = newpos turtle.direction d turtle.position }}
+  42  
+  43  newpos :: Float -> Float -> Point -> Point
+  44  newpos dir d pos0 = pos0 G.+ diff
+  45      where
+  46          diff = d G.* unitVectorAtAngle a
+  47          a = degToRad (90 - dir)
+[1 of 1] Compiling World            ( src/World.hs, interpreted )
+Ok, one module loaded.
+2022-09-22 19:04:51.661901522
+>>> :e
+   1  {-# LANGUAGE DuplicateRecordFields #-}
+   2  {-# LANGUAGE NoFieldSelectors #-}
+   3  {-# LANGUAGE OverloadedRecordDot #-}
+   4  module World where
+   5  
+   6  import Graphics.Gloss
+   7  import Graphics.Gloss.Data.Point
+   8  import qualified Graphics.Gloss.Data.Point.Arithmetic as G
+   9  import Graphics.Gloss.Data.Vector
+  10  import Graphics.Gloss.Geometry.Angle
+  11  
+  12  data World
+  13      = World
+  14      { turtle :: Turtle
+  15      , pict   :: Picture 
+  16      }
+  17      deriving (Eq, Show)
+  18  
+  19  defaultWorld :: World
+  20  defaultWorld = World { turtle = defaultTurtle 
+  21                       , pict = black
+  22                       }
+  23  data Turtle
+  24      = Turtle
+  25      { position :: Point
+  26      , direction :: Float
+  27      , pen :: Updown
+  28      , thic :: Float
+  29      , color :: Color
+  30      , showme :: Bool
+  31      }
+  32      deriving (Eq, Show)
+  33  
+  34  defaultTurtle :: Turtle
+  35  defaultTurtle = Turtle
+  36                { position = (0,0)
+  37                , direction = 0
+  38                , pen = Up
+  39                , thic = 1
+  40                , color = black
+  41                , showme = False
+  42                }
+  43  
+  44  data Updown
+  45      = Up
+  46      | Down
+  47      deriving (Eq, Show)
+  48  
+  49  --
+  50  
+  51  type Instruction = World -> World
+  52  
+  53  forward :: Float -> Instruction
+  54  forward d world = case world of
+  55      World { turtle = turtle } -> world { turtle = turtle { position = newpos turtle.direction d turtle.position }}
+  56  
+  57  newpos :: Float -> Float -> Point -> Point
+  58  newpos dir d pos0 = pos0 G.+ diff
+  59      where
+  60          diff = d G.* unitVectorAtAngle a
+  61          a = degToRad (90 - dir)
+[1 of 1] Compiling World            ( src/World.hs, interpreted )
+
+src/World.hs:21:31: error:
+    • Couldn't match expected type ‘Picture’ with actual type ‘Color’
+    • In the ‘pict’ field of a record
+      In the expression: World {turtle = defaultTurtle, pict = black}
+      In an equation for ‘defaultWorld’:
+          defaultWorld = World {turtle = defaultTurtle, pict = black}
+   |
+21 |                      , pict = black
+   |                               ^^^^^
+Failed, no modules loaded.
+2022-09-22 19:13:20.574111726
+>>> :e
+   1  {-# LANGUAGE DuplicateRecordFields #-}
+   2  {-# LANGUAGE NoFieldSelectors #-}
+   3  {-# LANGUAGE OverloadedRecordDot #-}
+   4  module World where
+   5  
+   6  import Graphics.Gloss
+   7  import Graphics.Gloss.Color
+   8  import Graphics.Gloss.Data.Point
+   9  import qualified Graphics.Gloss.Data.Point.Arithmetic as G
+  10  import Graphics.Gloss.Data.Vector
+  11  import Graphics.Gloss.Geometry.Angle
+  12  
+  13  data World
+  14      = World
+  15      { turtle :: Turtle
+  16      , pict   :: Picture 
+  17      }
+  18      deriving (Eq, Show)
+  19  
+  20  defaultWorld :: World
+  21  defaultWorld = World { turtle = defaultTurtle 
+  22                       , pict = black
+  23                       }
+  24  data Turtle
+  25      = Turtle
+  26      { position :: Point
+  27      , direction :: Float
+  28      , pen :: Updown
+  29      , thic :: Float
+  30      , color :: Color
+  31      , showme :: Bool
+  32      }
+  33      deriving (Eq, Show)
+  34  
+  35  defaultTurtle :: Turtle
+  36  defaultTurtle = Turtle
+  37                { position = (0,0)
+  38                , direction = 0
+  39                , pen = Up
+  40                , thic = 1
+  41                , color = black
+  42                , showme = False
+  43                }
+  44  
+  45  data Updown
+  46      = Up
+  47      | Down
+  48      deriving (Eq, Show)
+  49  
+  50  --
+  51  
+  52  type Instruction = World -> World
+  53  
+  54  forward :: Float -> Instruction
+  55  forward d world = case world of
+  56      World { turtle = turtle } -> world { turtle = turtle { position = newpos turtle.direction d turtle.position }}
+  57  
+  58  newpos :: Float -> Float -> Point -> Point
+  59  newpos dir d pos0 = pos0 G.+ diff
+  60      where
+  61          diff = d G.* unitVectorAtAngle a
+  62          a = degToRad (90 - dir)
+[1 of 1] Compiling World            ( src/World.hs, interpreted )
+
+src/World.hs:7:1: error:
+    Could not find module ‘Graphics.Gloss.Color’
+    Perhaps you meant Graphics.Gloss.Data.Color (from gloss-1.13.2.2)
+    Use -v (or `:set -v` in ghci) to see a list of the files searched for.
+  |
+7 | import Graphics.Gloss.Color
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Failed, no modules loaded.
+2022-09-22 19:14:52.608458047
+>>> :e
+   1  {-# LANGUAGE DuplicateRecordFields #-}
+   2  {-# LANGUAGE NoFieldSelectors #-}
+   3  {-# LANGUAGE OverloadedRecordDot #-}
+   4  module World where
+   5  
+   6  import Graphics.Gloss
+   7  import Graphics.Gloss.Data.Color
+   8  import Graphics.Gloss.Data.Point
+   9  import qualified Graphics.Gloss.Data.Point.Arithmetic as G
+  10  import Graphics.Gloss.Data.Vector
+  11  import Graphics.Gloss.Geometry.Angle
+  12  
+  13  data World
+  14      = World
+  15      { turtle :: Turtle
+  16      , pict   :: Picture 
+  17      }
+  18      deriving (Eq, Show)
+  19  
+  20  defaultWorld :: World
+  21  defaultWorld = World { turtle = defaultTurtle 
+  22                       , pict = black
+  23                       }
+  24  data Turtle
+  25      = Turtle
+  26      { position :: Point
+  27      , direction :: Float
+  28      , pen :: Updown
+  29      , thic :: Float
+  30      , color :: Color
+  31      , showme :: Bool
+  32      }
+  33      deriving (Eq, Show)
+  34  
+  35  defaultTurtle :: Turtle
+  36  defaultTurtle = Turtle
+  37                { position = (0,0)
+  38                , direction = 0
+  39                , pen = Up
+  40                , thic = 1
+  41                , color = black
+  42                , showme = False
+  43                }
+  44  
+  45  data Updown
+  46      = Up
+  47      | Down
+  48      deriving (Eq, Show)
+  49  
+  50  --
+  51  
+  52  type Instruction = World -> World
+  53  
+  54  forward :: Float -> Instruction
+  55  forward d world = case world of
+  56      World { turtle = turtle } -> world { turtle = turtle { position = newpos turtle.direction d turtle.position }}
+  57  
+  58  newpos :: Float -> Float -> Point -> Point
+  59  newpos dir d pos0 = pos0 G.+ diff
+  60      where
+  61          diff = d G.* unitVectorAtAngle a
+  62          a = degToRad (90 - dir)
+[1 of 1] Compiling World            ( src/World.hs, interpreted )
+
+src/World.hs:22:31: error:
+    • Couldn't match expected type ‘Picture’ with actual type ‘Color’
+    • In the ‘pict’ field of a record
+      In the expression: World {turtle = defaultTurtle, pict = black}
+      In an equation for ‘defaultWorld’:
+          defaultWorld = World {turtle = defaultTurtle, pict = black}
+   |
+22 |                      , pict = black
+   |                               ^^^^^
+Failed, no modules loaded.
+2022-09-22 19:15:18.499959573
+>>> :e
+   1  {-# LANGUAGE DuplicateRecordFields #-}
+   2  {-# LANGUAGE NoFieldSelectors #-}
+   3  {-# LANGUAGE OverloadedRecordDot #-}
+   4  module World where
+   5  
+   6  import Graphics.Gloss
+   7  import Graphics.Gloss.Data.Color
+   8  import Graphics.Gloss.Data.Point
+   9  import qualified Graphics.Gloss.Data.Point.Arithmetic as G
+  10  import Graphics.Gloss.Data.Vector
+  11  import Graphics.Gloss.Geometry.Angle
+  12  
+  13  data World
+  14      = World
+  15      { turtle :: Turtle
+  16      , pict   :: Picture 
+  17      }
+  18      deriving (Eq, Show)
+  19  
+  20  defaultWorld :: World
+  21  defaultWorld = World { turtle = defaultTurtle 
+  22                       , pict = blank
+  23                       }
+  24  data Turtle
+  25      = Turtle
+  26      { position :: Point
+  27      , direction :: Float
+  28      , pen :: Updown
+  29      , thic :: Float
+  30      , color :: Color
+  31      , showme :: Bool
+  32      }
+  33      deriving (Eq, Show)
+  34  
+  35  defaultTurtle :: Turtle
+  36  defaultTurtle = Turtle
+  37                { position = (0,0)
+  38                , direction = 0
+  39                , pen = Up
+  40                , thic = 1
+  41                , color = black
+  42                , showme = False
+  43                }
+  44  
+  45  data Updown
+  46      = Up
+  47      | Down
+  48      deriving (Eq, Show)
+  49  
+  50  --
+  51  
+  52  type Instruction = World -> World
+  53  
+  54  forward :: Float -> Instruction
+  55  forward d world = case world of
+  56      World { turtle = turtle } -> world { turtle = turtle { position = newpos turtle.direction d turtle.position }}
+  57  
+  58  newpos :: Float -> Float -> Point -> Point
+  59  newpos dir d pos0 = pos0 G.+ diff
+  60      where
+  61          diff = d G.* unitVectorAtAngle a
+  62          a = degToRad (90 - dir)
+[1 of 1] Compiling World            ( src/World.hs, interpreted )
+Ok, one module loaded.
+2022-09-22 19:17:34.854099566
+>>> forward 100 (defaultWorld )
+World {turtle = Turtle {position = (-4.371139e-6,100.0), direction = 0.0, pen = Up, thic = 1.0, color = RGBA 0.0 0.0 0.0 1.0, showme = False}, pict = Blank}
+2022-09-22 19:19:29.710547028
+>>> :e
+   1  {-# LANGUAGE DuplicateRecordFields #-}
+   2  {-# LANGUAGE NoFieldSelectors #-}
+   3  {-# LANGUAGE OverloadedRecordDot #-}
+   4  module World where
+   5  
+   6  import Graphics.Gloss
+   7  import Graphics.Gloss.Data.Color
+   8  import Graphics.Gloss.Data.Point
+   9  import qualified Graphics.Gloss.Data.Point.Arithmetic as G
+  10  import Graphics.Gloss.Data.Vector
+  11  import Graphics.Gloss.Geometry.Angle
+  12  
+  13  data World
+  14      = World
+  15      { turtle :: Turtle
+  16      , pict   :: Picture 
+  17      }
+  18      deriving (Eq, Show)
+  19  
+  20  defaultWorld :: World
+  21  defaultWorld = World { turtle = defaultTurtle 
+  22                       , pict = blank
+  23                       }
+  24  data Turtle
+  25      = Turtle
+  26      { position :: Point
+  27      , direction :: Float
+  28      , pen :: Updown
+  29      , thic :: Float
+  30      , color :: Color
+  31      , showme :: Bool
+  32      }
+  33      deriving (Eq, Show)
+  34  
+  35  defaultTurtle :: Turtle
+  36  defaultTurtle = Turtle
+  37                { position = (0,0)
+  38                , direction = 60
+  39                , pen = Up
+  40                , thic = 1
+  41                , color = black
+  42                , showme = False
+  43                }
+  44  
+  45  data Updown
+  46      = Up
+  47      | Down
+  48      deriving (Eq, Show)
+  49  
+  50  --
+  51  
+  52  type Instruction = World -> World
+  53  
+  54  forward :: Float -> Instruction
+  55  forward d world = case world of
+  56      World { turtle = turtle } -> world { turtle = turtle { position = newpos turtle.direction d turtle.position }}
+  57  
+  58  newpos :: Float -> Float -> Point -> Point
+  59  newpos dir d pos0 = pos0 G.+ diff
+  60      where
+  61          diff = d G.* unitVectorAtAngle a
+  62          a = degToRad (90 - dir)
+[1 of 1] Compiling World            ( src/World.hs, interpreted )
+Ok, one module loaded.
+2022-09-22 19:21:09.752312828
+>>> forward 100 (defaultWorld )
+World {turtle = Turtle {position = (86.60254,50.0), direction = 60.0, pen = Up, thic = 1.0, color = RGBA 0.0 0.0 0.0 1.0, showme = False}, pict = Blank}
+2022-09-22 19:21:14.563534941
+>>> 

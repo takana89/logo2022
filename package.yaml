@@ -1,10 +1,10 @@
 name:                logo2022
-version:             0.1.0.0
-github:              "nobsun/logo2022"
+version:             0.0.0.0
+github:              "takana89/logo2022"
 license:             BSD3
-author:              "Nobuo Yamashita"
-maintainer:          "nobsun@sampou.org"
-copyright:           "Copyright: (c) 2022 Nobuo Yamashita"
+author:              "Nanaka Takano and Nobuo Yamashita"
+maintainer:          "btslovesg@gmail.com"
+copyright:           "Copyright: (c) 2022 Nanaka Takno and Nobuo Yamashita"
 
 extra-source-files:
 - README.md
@@ -17,7 +17,7 @@ extra-source-files:
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:         Please see the README on GitHub at <https://github.com/nobsun/logo2022#readme>
+description:         Please see the README on GitHub at <https://github.com/takana89/logo2022#readme>
 
 dependencies:
 - base >= 4.7 && < 5
@@ -38,6 +38,12 @@ executables:
     - -rtsopts
     # - -threaded
     # - -with-rtsopts=-N
+    dependencies:
+    - logo2022
+
+  experiment:
+    main:                Main.hs
+    source-dirs:         experiment
     dependencies:
     - logo2022
 
