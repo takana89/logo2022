@@ -1,0 +1,11 @@
+:q
+:r
+:r
+:r
+:t uncurry
+:r
+:r
+:l src/World.hs
+dispWorld (fd 200 defaultWorld )
+:r
+:l src/World.hs
