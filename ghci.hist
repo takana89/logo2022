@@ -1,3 +1,24 @@
+dispWorld (fd 100 (lt 60 (fd 200 defaultWorld)))
+:l src/World.hs
+dispWorld (fd 200 defaultWorld)
+:l src/World.hs
+dispWorld (World.arc 120 100 defaultWorld)
+:l src/World.hs
+dispWorld (World.arc 120 100 defaultWorld)
+:l src/World.hs
+dispWorld (World.arc 120 100 defaultWorld)
+:l src/World.hs
+dispWorld (World.arc 120 100 defaultWorld)
+dispWorld (arc 120 100 defaultWorld)
+:l src/World.hs
+:q
+:r
+dispWorld (arc 120 100 defaultWorld)
+:r
+:l src/World.hs
+display FullScreen white test
+test = thickArc 30 90 100 10
+:l src/World.hs
 :q
 :r
 :r

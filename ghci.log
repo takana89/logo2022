@@ -2104,3 +2104,2472 @@ Ok, one module loaded.
 2022-10-06 19:28:41.723412779
 >>> :q
 Leaving GHCi.
+Stack has not been tested with GHC versions above 9.0, and using 9.2.4, this may fail
+Stack has not been tested with Cabal versions above 3.4, but version 3.6.3.0 was found, this may fail
+GHCi, version 9.2.4: https://www.haskell.org/ghc/  :? for help
+Loaded GHCi configuration from /home/nanaka/logo2022/.ghci
+2022-10-20 18:38:42.260948096
+>>> display Fullscreen white $ thicArc (degToRad 30) (degToRad 90) 100 10
+
+<interactive>:1:1: error:
+    Variable not in scope: display :: t6 -> t7 -> a0 -> b
+
+<interactive>:1:9: error: Data constructor not in scope: Fullscreen
+
+<interactive>:1:20: error: Variable not in scope: white
+
+<interactive>:1:28: error:
+    Variable not in scope: thicArc :: t2 -> t3 -> t4 -> t5 -> a0
+
+<interactive>:1:37: error:
+    Variable not in scope: degToRad :: t1 -> t2
+
+<interactive>:1:51: error:
+    Variable not in scope: degToRad :: t0 -> t3
+2022-10-20 18:41:59.909712843
+>>> :e src/World.hs
+   1  {-# LANGUAGE DuplicateRecordFields #-}
+   2  {-# LANGUAGE NoFieldSelectors #-}
+   3  {-# LANGUAGE OverloadedRecordDot #-}
+   4  module World where
+   5  
+   6  import Data.Bool
+   7  import Graphics.Gloss
+   8  import Graphics.Gloss.Data.Color
+   9  import Graphics.Gloss.Data.Picture
+  10  import Graphics.Gloss.Data.Point
+  11  import qualified Graphics.Gloss.Data.Point.Arithmetic as G
+  12  import Graphics.Gloss.Data.Vector
+  13  import Graphics.Gloss.Geometry.Angle
+  14  
+  15  data World
+  16      = World
+  17      { turtle :: Turtle
+  18      , pict   :: Picture 
+  19      }
+  20      deriving (Eq, Show)
+  21  
+  22  defaultWorld :: World
+  23  defaultWorld = World { turtle = defaultTurtle 
+  24                       , pict = defaultTurtle.selfimg
+  25                       }
+  26  data Turtle
+  27      = Turtle
+  28      { position :: Point
+  29      , direction :: Float
+  30      , pen :: Updown
+  31      , thic :: Float
+  32      , color :: Color
+  33      , showme :: Bool
+  34      , selfimg :: Picture
+  35      }
+  36      deriving (Eq, Show)
+  37  
+  38  defaultTurtle :: Turtle
+  39  defaultTurtle = Turtle
+  40                { position = (0,0)
+  41                , direction = 60
+  42                , pen = Down
+  43                , thic = 10
+  44                , color = black
+  45                , showme = True
+  46                , selfimg = lineLoop [(-10,-10),(-10,10),(10,10),(10,-10),(-10,-10),(0,10),(10,-10)]
+  47                }
+  48  
+  49  data Updown
+  50      = Up
+  51      | Down
+  52      deriving (Eq, Show)
+  53  
+  54  --
+  55  
+  56  type Instruction = World -> World
+  57  
+  58  forward, fd :: Float -> Instruction
+  59  forward d world = case world of
+  60      World { turtle = turtle } 
+  61          -> world { turtle = turtle { position = (x',y') }
+  62                   , pict = bool blank selfimg' turtle.showme <> case turtle.pen of
+  63                      Up   -> blank
+  64                      Down -> thicLine d turtle.direction turtle.thic turtle.position
+  65                   }
+  66              where
+  67                  (x',y') = newpos turtle.direction d turtle.position
+  68                  selfimg' = translate x' y' (rotate turtle.direction turtle.selfimg)
+  69  
+  70  fd = forward
+  71  
+  72  back, bk :: Float -> Instruction
+  73  back = forward . negate
+  74  
+  75  bk = back
+  76  
+  77  left, lt :: Float -> Instruction
+  78  left = right . negate
+  79  
+  80  lt = left
+  81  
+  82  right, rt :: Float -> Instruction 
+  83  right dir world = case world of
+  84      World { turtle = turtle } 
+  85          -> world { turtle = turtle { direction = newdir }
+  86                   , pict = bool blank selfimg' turtle.showme
+  87                   }
+  88              where
+  89                  newdir = turtle.direction + dir
+  90                  selfimg' = uncurry translate turtle.position (rotate newdir turtle.selfimg)
+  91  
+  92  rt = right
+  93  
+  94  setxy :: Float -> Float -> Instruction
+  95  setxy x y world =  case world of
+  96      World { turtle = turtle } 
+  97          -> world { turtle = turtle { position = (x,y) }
+  98                   , pict = bool blank selfimg' turtle.showme <> case turtle.pen of
+  99                      Up   -> blank
+ 100                      Down -> thicLine dist dir turtle.thic turtle.position
+ 101                   }
+ 102              where
+ 103                  vec = (x,y) G.- turtle.position
+ 104                  dist = magV vec
+ 105                  dir = radToDeg (angleVV (0,1) vec)
+ 106                  selfimg' = translate x y turtle.selfimg
+ 107  
+ 108  setx :: Float -> Instruction
+ 109  setx x world = case world of
+ 110      World { turtle = turtle } 
+ 111          -> setxy x y world
+ 112          where
+ 113              (_,y) = turtle.position
+ 114  
+ 115  sety :: Float -> Instruction
+ 116  sety y world = case world of
+ 117      World { turtle = turtle } 
+ 118          -> setxy x y world
+ 119          where
+ 120              (x,_) = turtle.position
+ 121  
+ 122  setheading :: Float -> Instruction
+ 123  setheading h world = case world of
+ 124      World { turtle = turtle } 
+ 125          -> right (h-d) world
+ 126          where
+ 127              d = turtle.direction
+ 128  
+ 129  home :: Instruction
+ 130  home world = case world of
+ 131      World { turtle = turtle } 
+ 132          -> heading 0 (setxy 0 0 world )
+ 133  
+ 134  
+ 135  -- utilities
+ 136  
+ 137  newpos :: Float -> Float -> Point -> Point
+ 138  newpos dir d pos0 = pos0 G.+ diff
+ 139      where
+ 140          diff = d G.* unitVectorAtAngle a
+ 141          a = degToRad (90 - dir)
+ 142  
+ 143  spot :: Float -> Point -> Picture
+ 144  spot thc (x,y)
+ 145      = translate x y
+ 146      $ circleSolid (thc / 2)
+ 147  
+ 148  dispPict :: Picture -> IO ()
+ 149  dispPict pict = display FullScreen white pict
+ 150  
+ 151  thicLine :: Float -> Float -> Float -> Point -> Picture
+ 152  thicLine dis dir thc pos1 
+ 153      = spot thc pos1
+ 154      <> spot thc pos2
+ 155      <> translate x y (rotate dir $ rectangleSolid thc dis)
+ 156      where
+ 157          (x,y) = 0.5 G.* (pos1 G.+ pos2)
+ 158          pos2 = newpos dir dis pos1
+ 159  
+ 160  dispWorld :: World -> IO ()
+ 161  dispWorld world = dispPict world.pict
+Ok, no modules loaded.
+2022-10-20 18:43:03.236711703
+>>> :l src/World.hs
+[1 of 1] Compiling World            ( src/World.hs, interpreted )
+
+src/World.hs:132:12: error:
+    Variable not in scope: heading :: t0 -> World -> World
+    |
+132 |         -> heading 0 (setxy 0 0 world )
+    |            ^^^^^^^
+Failed, no modules loaded.
+2022-10-20 18:43:03.424995954
+>>> :e
+   1  {-# LANGUAGE DuplicateRecordFields #-}
+   2  {-# LANGUAGE NoFieldSelectors #-}
+   3  {-# LANGUAGE OverloadedRecordDot #-}
+   4  module World where
+   5  
+   6  import Data.Bool
+   7  import Graphics.Gloss
+   8  import Graphics.Gloss.Data.Color
+   9  import Graphics.Gloss.Data.Picture
+  10  import Graphics.Gloss.Data.Point
+  11  import qualified Graphics.Gloss.Data.Point.Arithmetic as G
+  12  import Graphics.Gloss.Data.Vector
+  13  import Graphics.Gloss.Geometry.Angle
+  14  
+  15  data World
+  16      = World
+  17      { turtle :: Turtle
+  18      , pict   :: Picture 
+  19      }
+  20      deriving (Eq, Show)
+  21  
+  22  defaultWorld :: World
+  23  defaultWorld = World { turtle = defaultTurtle 
+  24                       , pict = defaultTurtle.selfimg
+  25                       }
+  26  data Turtle
+  27      = Turtle
+  28      { position :: Point
+  29      , direction :: Float
+  30      , pen :: Updown
+  31      , thic :: Float
+  32      , color :: Color
+  33      , showme :: Bool
+  34      , selfimg :: Picture
+  35      }
+  36      deriving (Eq, Show)
+  37  
+  38  defaultTurtle :: Turtle
+  39  defaultTurtle = Turtle
+  40                { position = (0,0)
+  41                , direction = 60
+  42                , pen = Down
+  43                , thic = 10
+  44                , color = black
+  45                , showme = True
+  46                , selfimg = lineLoop [(-10,-10),(-10,10),(10,10),(10,-10),(-10,-10),(0,10),(10,-10)]
+  47                }
+  48  
+  49  data Updown
+  50      = Up
+  51      | Down
+  52      deriving (Eq, Show)
+  53  
+  54  --
+  55  
+  56  type Instruction = World -> World
+  57  
+  58  forward, fd :: Float -> Instruction
+  59  forward d world = case world of
+  60      World { turtle = turtle } 
+  61          -> world { turtle = turtle { position = (x',y') }
+  62                   , pict = bool blank selfimg' turtle.showme <> case turtle.pen of
+  63                      Up   -> blank
+  64                      Down -> thicLine d turtle.direction turtle.thic turtle.position
+  65                   }
+  66              where
+  67                  (x',y') = newpos turtle.direction d turtle.position
+  68                  selfimg' = translate x' y' (rotate turtle.direction turtle.selfimg)
+  69  
+  70  fd = forward
+  71  
+  72  back, bk :: Float -> Instruction
+  73  back = forward . negate
+  74  
+  75  bk = back
+  76  
+  77  left, lt :: Float -> Instruction
+  78  left = right . negate
+  79  
+  80  lt = left
+  81  
+  82  right, rt :: Float -> Instruction 
+  83  right dir world = case world of
+  84      World { turtle = turtle } 
+  85          -> world { turtle = turtle { direction = newdir }
+  86                   , pict = bool blank selfimg' turtle.showme
+  87                   }
+  88              where
+  89                  newdir = turtle.direction + dir
+  90                  selfimg' = uncurry translate turtle.position (rotate newdir turtle.selfimg)
+  91  
+  92  rt = right
+  93  
+  94  setxy :: Float -> Float -> Instruction
+  95  setxy x y world =  case world of
+  96      World { turtle = turtle } 
+  97          -> world { turtle = turtle { position = (x,y) }
+  98                   , pict = bool blank selfimg' turtle.showme <> case turtle.pen of
+  99                      Up   -> blank
+ 100                      Down -> thicLine dist dir turtle.thic turtle.position
+ 101                   }
+ 102              where
+ 103                  vec = (x,y) G.- turtle.position
+ 104                  dist = magV vec
+ 105                  dir = radToDeg (angleVV (0,1) vec)
+ 106                  selfimg' = translate x y turtle.selfimg
+ 107  
+ 108  setx :: Float -> Instruction
+ 109  setx x world = case world of
+ 110      World { turtle = turtle } 
+ 111          -> setxy x y world
+ 112          where
+ 113              (_,y) = turtle.position
+ 114  
+ 115  sety :: Float -> Instruction
+ 116  sety y world = case world of
+ 117      World { turtle = turtle } 
+ 118          -> setxy x y world
+ 119          where
+ 120              (x,_) = turtle.position
+ 121  
+ 122  setheading :: Float -> Instruction
+ 123  setheading h world = case world of
+ 124      World { turtle = turtle } 
+ 125          -> right (h-d) world
+ 126          where
+ 127              d = turtle.direction
+ 128  
+ 129  home :: Instruction
+ 130  home world = case world of
+ 131      World { turtle = turtle } 
+ 132          -> setheading 0 (setxy 0 0 world )
+ 133  
+ 134  
+ 135  -- utilities
+ 136  
+ 137  newpos :: Float -> Float -> Point -> Point
+ 138  newpos dir d pos0 = pos0 G.+ diff
+ 139      where
+ 140          diff = d G.* unitVectorAtAngle a
+ 141          a = degToRad (90 - dir)
+ 142  
+ 143  spot :: Float -> Point -> Picture
+ 144  spot thc (x,y)
+ 145      = translate x y
+ 146      $ circleSolid (thc / 2)
+ 147  
+ 148  dispPict :: Picture -> IO ()
+ 149  dispPict pict = display FullScreen white pict
+ 150  
+ 151  thicLine :: Float -> Float -> Float -> Point -> Picture
+ 152  thicLine dis dir thc pos1 
+ 153      = spot thc pos1
+ 154      <> spot thc pos2
+ 155      <> translate x y (rotate dir $ rectangleSolid thc dis)
+ 156      where
+ 157          (x,y) = 0.5 G.* (pos1 G.+ pos2)
+ 158          pos2 = newpos dir dis pos1
+ 159  
+ 160  dispWorld :: World -> IO ()
+ 161  dispWorld world = dispPict world.pict
+[1 of 1] Compiling World            ( src/World.hs, interpreted )
+Ok, one module loaded.
+2022-10-20 18:43:34.241457624
+>>> display Fullscreen white $ thicArc (degToRad 30) (degToRad 90) 100 10
+
+<interactive>:5:9: error:
+    • Data constructor not in scope: Fullscreen :: Display
+    • Perhaps you meant ‘FullScreen’ (imported from Graphics.Gloss)
+
+<interactive>:5:28: error:
+    • Variable not in scope:
+        thicArc :: Float -> Float -> t0 -> t1 -> Picture
+    • Perhaps you meant one of these:
+        ‘thickArc’ (imported from Graphics.Gloss.Data.Picture),
+        data constructor ‘ThickArc’ (imported from Graphics.Gloss.Data.Picture)
+2022-10-20 18:43:40.836721764
+>>> display FullScreen white $ thickArc (degToRad 30) (degToRad 90) 100 10
+<interactive>: interrupted
+<interactive>: warning: too many hs_exit()s
+Stack has not been tested with GHC versions above 9.0, and using 9.2.4, this may fail
+Stack has not been tested with Cabal versions above 3.4, but version 3.6.3.0 was found, this may fail
+GHCi, version 9.2.4: https://www.haskell.org/ghc/  :? for help
+Loaded GHCi configuration from /home/nanaka/logo2022/.ghci
+2022-10-20 18:46:03.859197025
+>>> :e src/World.hs
+   1  {-# LANGUAGE DuplicateRecordFields #-}
+   2  {-# LANGUAGE NoFieldSelectors #-}
+   3  {-# LANGUAGE OverloadedRecordDot #-}
+   4  module World where
+   5  
+   6  import Data.Bool
+   7  import Graphics.Gloss
+   8  import Graphics.Gloss.Data.Color
+   9  import Graphics.Gloss.Data.Picture
+  10  import Graphics.Gloss.Data.Point
+  11  import qualified Graphics.Gloss.Data.Point.Arithmetic as G
+  12  import Graphics.Gloss.Data.Vector
+  13  import Graphics.Gloss.Geometry.Angle
+  14  
+  15  data World
+  16      = World
+  17      { turtle :: Turtle
+  18      , pict   :: Picture 
+  19      }
+  20      deriving (Eq, Show)
+  21  
+  22  defaultWorld :: World
+  23  defaultWorld = World { turtle = defaultTurtle 
+  24                       , pict = defaultTurtle.selfimg
+  25                       }
+  26  data Turtle
+  27      = Turtle
+  28      { position :: Point
+  29      , direction :: Float
+  30      , pen :: Updown
+  31      , thic :: Float
+  32      , color :: Color
+  33      , showme :: Bool
+  34      , selfimg :: Picture
+  35      }
+  36      deriving (Eq, Show)
+  37  
+  38  defaultTurtle :: Turtle
+  39  defaultTurtle = Turtle
+  40                { position = (0,0)
+  41                , direction = 60
+  42                , pen = Down
+  43                , thic = 10
+  44                , color = black
+  45                , showme = True
+  46                , selfimg = lineLoop [(-10,-10),(-10,10),(10,10),(10,-10),(-10,-10),(0,10),(10,-10)]
+  47                }
+  48  
+  49  data Updown
+  50      = Up
+  51      | Down
+  52      deriving (Eq, Show)
+  53  
+  54  --
+  55  
+  56  type Instruction = World -> World
+  57  
+  58  forward, fd :: Float -> Instruction
+  59  forward d world = case world of
+  60      World { turtle = turtle } 
+  61          -> world { turtle = turtle { position = (x',y') }
+  62                   , pict = bool blank selfimg' turtle.showme <> case turtle.pen of
+  63                      Up   -> blank
+  64                      Down -> thicLine d turtle.direction turtle.thic turtle.position
+  65                   }
+  66              where
+  67                  (x',y') = newpos turtle.direction d turtle.position
+  68                  selfimg' = translate x' y' (rotate turtle.direction turtle.selfimg)
+  69  
+  70  fd = forward
+  71  
+  72  back, bk :: Float -> Instruction
+  73  back = forward . negate
+  74  
+  75  bk = back
+  76  
+  77  left, lt :: Float -> Instruction
+  78  left = right . negate
+  79  
+  80  lt = left
+  81  
+  82  right, rt :: Float -> Instruction 
+  83  right dir world = case world of
+  84      World { turtle = turtle } 
+  85          -> world { turtle = turtle { direction = newdir }
+  86                   , pict = bool blank selfimg' turtle.showme
+  87                   }
+  88              where
+  89                  newdir = turtle.direction + dir
+  90                  selfimg' = uncurry translate turtle.position (rotate newdir turtle.selfimg)
+  91  
+  92  rt = right
+  93  
+  94  setxy :: Float -> Float -> Instruction
+  95  setxy x y world =  case world of
+  96      World { turtle = turtle } 
+  97          -> world { turtle = turtle { position = (x,y) }
+  98                   , pict = bool blank selfimg' turtle.showme <> case turtle.pen of
+  99                      Up   -> blank
+ 100                      Down -> thicLine dist dir turtle.thic turtle.position
+ 101                   }
+ 102              where
+ 103                  vec = (x,y) G.- turtle.position
+ 104                  dist = magV vec
+ 105                  dir = radToDeg (angleVV (0,1) vec)
+ 106                  selfimg' = translate x y turtle.selfimg
+ 107  
+ 108  setx :: Float -> Instruction
+ 109  setx x world = case world of
+ 110      World { turtle = turtle } 
+ 111          -> setxy x y world
+ 112          where
+ 113              (_,y) = turtle.position
+ 114  
+ 115  sety :: Float -> Instruction
+ 116  sety y world = case world of
+ 117      World { turtle = turtle } 
+ 118          -> setxy x y world
+ 119          where
+ 120              (x,_) = turtle.position
+ 121  
+ 122  setheading :: Float -> Instruction
+ 123  setheading h world = case world of
+ 124      World { turtle = turtle } 
+ 125          -> right (h-d) world
+ 126          where
+ 127              d = turtle.direction
+ 128  
+ 129  home :: Instruction
+ 130  home world = case world of
+ 131      World { turtle = turtle } 
+ 132          -> setheading 0 (setxy 0 0 world )
+ 133  
+ 134  
+ 135  -- utilities
+ 136  
+ 137  newpos :: Float -> Float -> Point -> Point
+ 138  newpos dir d pos0 = pos0 G.+ diff
+ 139      where
+ 140          diff = d G.* unitVectorAtAngle a
+ 141          a = degToRad (90 - dir)
+ 142  
+ 143  spot :: Float -> Point -> Picture
+ 144  spot thc (x,y)
+ 145      = translate x y
+ 146      $ circleSolid (thc / 2)
+ 147  
+ 148  dispPict :: Picture -> IO ()
+ 149  dispPict pict = display FullScreen white pict
+ 150  
+ 151  thicLine :: Float -> Float -> Float -> Point -> Picture
+ 152  thicLine dis dir thc pos1 
+ 153      = spot thc pos1
+ 154      <> spot thc pos2
+ 155      <> translate x y (rotate dir $ rectangleSolid thc dis)
+ 156      where
+ 157          (x,y) = 0.5 G.* (pos1 G.+ pos2)
+ 158          pos2 = newpos dir dis pos1
+ 159  
+ 160  dispWorld :: World -> IO ()
+ 161  dispWorld world = dispPict world.pict
+Ok, no modules loaded.
+2022-10-20 18:46:18.651076231
+>>> :l src/World.hs
+[1 of 1] Compiling World            ( src/World.hs, interpreted )
+Ok, one module loaded.
+2022-10-20 18:46:18.905209924
+>>> test = thickArc 30 90 100 10
+2022-10-20 18:48:08.785944004
+>>> display FullScreen white test
+<interactive>: interrupted
+<interactive>: warning: too many hs_exit()s
+Stack has not been tested with GHC versions above 9.0, and using 9.2.4, this may fail
+Stack has not been tested with Cabal versions above 3.4, but version 3.6.3.0 was found, this may fail
+GHCi, version 9.2.4: https://www.haskell.org/ghc/  :? for help
+Loaded GHCi configuration from /home/nanaka/logo2022/.ghci
+2022-10-20 19:09:25.830620132
+>>> :e src/World.hs
+   1  {-# LANGUAGE DuplicateRecordFields #-}
+   2  {-# LANGUAGE NoFieldSelectors #-}
+   3  {-# LANGUAGE OverloadedRecordDot #-}
+   4  module World where
+   5  
+   6  import Data.Bool
+   7  import Graphics.Gloss
+   8  import Graphics.Gloss.Data.Color
+   9  import Graphics.Gloss.Data.Picture
+  10  import Graphics.Gloss.Data.Point
+  11  import qualified Graphics.Gloss.Data.Point.Arithmetic as G
+  12  import Graphics.Gloss.Data.Vector
+  13  import Graphics.Gloss.Geometry.Angle
+  14  
+  15  data World
+  16      = World
+  17      { turtle :: Turtle
+  18      , pict   :: Picture 
+  19      }
+  20      deriving (Eq, Show)
+  21  
+  22  defaultWorld :: World
+  23  defaultWorld = World { turtle = defaultTurtle 
+  24                       , pict = defaultTurtle.selfimg
+  25                       }
+  26  data Turtle
+  27      = Turtle
+  28      { position :: Point
+  29      , direction :: Float
+  30      , pen :: Updown
+  31      , thic :: Float
+  32      , color :: Color
+  33      , showme :: Bool
+  34      , selfimg :: Picture
+  35      }
+  36      deriving (Eq, Show)
+  37  
+  38  defaultTurtle :: Turtle
+  39  defaultTurtle = Turtle
+  40                { position = (0,0)
+  41                , direction = 60
+  42                , pen = Down
+  43                , thic = 10
+  44                , color = black
+  45                , showme = True
+  46                , selfimg = lineLoop [(-10,-10),(-10,10),(10,10),(10,-10),(-10,-10),(0,10),(10,-10)]
+  47                }
+  48  
+  49  data Updown
+  50      = Up
+  51      | Down
+  52      deriving (Eq, Show)
+  53  
+  54  --
+  55  
+  56  type Instruction = World -> World
+  57  
+  58  forward, fd :: Float -> Instruction
+  59  forward d world = case world of
+  60      World { turtle = turtle } 
+  61          -> world { turtle = turtle { position = (x',y') }
+  62                   , pict = bool blank selfimg' turtle.showme <> case turtle.pen of
+  63                      Up   -> blank
+  64                      Down -> thicLine d turtle.direction turtle.thic turtle.position
+  65                   }
+  66              where
+  67                  (x',y') = newpos turtle.direction d turtle.position
+  68                  selfimg' = translate x' y' (rotate turtle.direction turtle.selfimg)
+  69  
+  70  fd = forward
+  71  
+  72  back, bk :: Float -> Instruction
+  73  back = forward . negate
+  74  
+  75  bk = back
+  76  
+  77  left, lt :: Float -> Instruction
+  78  left = right . negate
+  79  
+  80  lt = left
+  81  
+  82  right, rt :: Float -> Instruction 
+  83  right dir world = case world of
+  84      World { turtle = turtle } 
+  85          -> world { turtle = turtle { direction = newdir }
+  86                   , pict = bool blank selfimg' turtle.showme
+  87                   }
+  88              where
+  89                  newdir = turtle.direction + dir
+  90                  selfimg' = uncurry translate turtle.position (rotate newdir turtle.selfimg)
+  91  
+  92  rt = right
+  93  
+  94  setxy :: Float -> Float -> Instruction
+  95  setxy x y world =  case world of
+  96      World { turtle = turtle } 
+  97          -> world { turtle = turtle { position = (x,y) }
+  98                   , pict = bool blank selfimg' turtle.showme <> case turtle.pen of
+  99                      Up   -> blank
+ 100                      Down -> thicLine dist dir turtle.thic turtle.position
+ 101                   }
+ 102              where
+ 103                  vec = (x,y) G.- turtle.position
+ 104                  dist = magV vec
+ 105                  dir = radToDeg (angleVV (0,1) vec)
+ 106                  selfimg' = translate x y turtle.selfimg
+ 107  
+ 108  setx :: Float -> Instruction
+ 109  setx x world = case world of
+ 110      World { turtle = turtle } 
+ 111          -> setxy x y world
+ 112          where
+ 113              (_,y) = turtle.position
+ 114  
+ 115  sety :: Float -> Instruction
+ 116  sety y world = case world of
+ 117      World { turtle = turtle } 
+ 118          -> setxy x y world
+ 119          where
+ 120              (x,_) = turtle.position
+ 121  
+ 122  setheading :: Float -> Instruction
+ 123  setheading h world = case world of
+ 124      World { turtle = turtle } 
+ 125          -> right (h-d) world
+ 126          where
+ 127              d = turtle.direction
+ 128  
+ 129  home :: Instruction
+ 130  home world = case world of
+ 131      World { turtle = turtle } 
+ 132          -> setheading 0 (setxy 0 0 world )
+ 133  
+ 134  arc :: Float -> Float -> Instruction
+ 135  arc t r world = case world of
+ 136      World { turtle = turtle }
+ 137          -> world { turtle = turtle { direction = turtle.direction + t }
+ 138                   , pict = bool blank selfimg' turtle.showme
+ 139                              <> thickArc (90-(turtle.direction+t))
+ 140                                          (90-turtle.direction)
+ 141                                          r turtle.thic
+ 142                   }
+ 143              where
+ 144                  selfimg' = rotate t turtle.selfimg
+ 145  
+ 146  -- utilities
+ 147  
+ 148  newpos :: Float -> Float -> Point -> Point
+ 149  newpos dir d pos0 = pos0 G.+ diff
+ 150      where
+ 151          diff = d G.* unitVectorAtAngle a
+ 152          a = degToRad (90 - dir)
+ 153  
+ 154  spot :: Float -> Point -> Picture
+ 155  spot thc (x,y)
+ 156      = translate x y
+ 157      $ circleSolid (thc / 2)
+ 158  
+ 159  dispPict :: Picture -> IO ()
+ 160  dispPict pict = display FullScreen white pict
+ 161  
+ 162  thicLine :: Float -> Float -> Float -> Point -> Picture
+ 163  thicLine dis dir thc pos1 
+ 164      = spot thc pos1
+ 165      <> spot thc pos2
+ 166      <> translate x y (rotate dir $ rectangleSolid thc dis)
+ 167      where
+ 168          (x,y) = 0.5 G.* (pos1 G.+ pos2)
+ 169          pos2 = newpos dir dis pos1
+ 170  
+ 171  dispWorld :: World -> IO ()
+ 172  dispWorld world = dispPict world.pict
+Ok, no modules loaded.
+2022-10-20 19:09:40.886324649
+>>> :l src/World.hs
+[1 of 1] Compiling World            ( src/World.hs, interpreted )
+Ok, one module loaded.
+2022-10-20 19:09:41.111252556
+>>> Stack has not been tested with GHC versions above 9.0, and using 9.2.4, this may fail
+Stack has not been tested with Cabal versions above 3.4, but version 3.6.3.0 was found, this may fail
+GHCi, version 9.2.4: https://www.haskell.org/ghc/  :? for help
+Loaded GHCi configuration from /home/nanaka/logo2022/.ghci
+2022-10-20 19:16:34.866233916
+>>> :e src/World.hs
+   1  {-# LANGUAGE DuplicateRecordFields #-}
+   2  {-# LANGUAGE NoFieldSelectors #-}
+   3  {-# LANGUAGE OverloadedRecordDot #-}
+   4  module World where
+   5  
+   6  import Data.Bool
+   7  import Graphics.Gloss
+   8  import Graphics.Gloss.Data.Color
+   9  import Graphics.Gloss.Data.Picture
+  10  import Graphics.Gloss.Data.Point
+  11  import qualified Graphics.Gloss.Data.Point.Arithmetic as G
+  12  import Graphics.Gloss.Data.Vector
+  13  import Graphics.Gloss.Geometry.Angle
+  14  
+  15  data World
+  16      = World
+  17      { turtle :: Turtle
+  18      , pict   :: Picture 
+  19      }
+  20      deriving (Eq, Show)
+  21  
+  22  defaultWorld :: World
+  23  defaultWorld = World { turtle = defaultTurtle 
+  24                       , pict = defaultTurtle.selfimg
+  25                       }
+  26  data Turtle
+  27      = Turtle
+  28      { position :: Point
+  29      , direction :: Float
+  30      , pen :: Updown
+  31      , thic :: Float
+  32      , color :: Color
+  33      , showme :: Bool
+  34      , selfimg :: Picture
+  35      }
+  36      deriving (Eq, Show)
+  37  
+  38  defaultTurtle :: Turtle
+  39  defaultTurtle = Turtle
+  40                { position = (0,0)
+  41                , direction = 60
+  42                , pen = Down
+  43                , thic = 10
+  44                , color = black
+  45                , showme = True
+  46                , selfimg = lineLoop [(-10,-10),(-10,10),(10,10),(10,-10),(-10,-10),(0,10),(10,-10)]
+  47                }
+  48  
+  49  data Updown
+  50      = Up
+  51      | Down
+  52      deriving (Eq, Show)
+  53  
+  54  --
+  55  
+  56  type Instruction = World -> World
+  57  
+  58  forward, fd :: Float -> Instruction
+  59  forward d world = case world of
+  60      World { turtle = turtle } 
+  61          -> world { turtle = turtle { position = (x',y') }
+  62                   , pict = bool blank selfimg' turtle.showme <> case turtle.pen of
+  63                      Up   -> blank
+  64                      Down -> thicLine d turtle.direction turtle.thic turtle.position
+  65                   }
+  66              where
+  67                  (x',y') = newpos turtle.direction d turtle.position
+  68                  selfimg' = translate x' y' (rotate turtle.direction turtle.selfimg)
+  69  
+  70  fd = forward
+  71  
+  72  back, bk :: Float -> Instruction
+  73  back = forward . negate
+  74  
+  75  bk = back
+  76  
+  77  left, lt :: Float -> Instruction
+  78  left = right . negate
+  79  
+  80  lt = left
+  81  
+  82  right, rt :: Float -> Instruction 
+  83  right dir world = case world of
+  84      World { turtle = turtle } 
+  85          -> world { turtle = turtle { direction = newdir }
+  86                   , pict = bool blank selfimg' turtle.showme
+  87                   }
+  88              where
+  89                  newdir = turtle.direction + dir
+  90                  selfimg' = uncurry translate turtle.position (rotate newdir turtle.selfimg)
+  91  
+  92  rt = right
+  93  
+  94  setxy :: Float -> Float -> Instruction
+  95  setxy x y world =  case world of
+  96      World { turtle = turtle } 
+  97          -> world { turtle = turtle { position = (x,y) }
+  98                   , pict = bool blank selfimg' turtle.showme <> case turtle.pen of
+  99                      Up   -> blank
+ 100                      Down -> thicLine dist dir turtle.thic turtle.position
+ 101                   }
+ 102              where
+ 103                  vec = (x,y) G.- turtle.position
+ 104                  dist = magV vec
+ 105                  dir = radToDeg (angleVV (0,1) vec)
+ 106                  selfimg' = translate x y turtle.selfimg
+ 107  
+ 108  setx :: Float -> Instruction
+ 109  setx x world = case world of
+ 110      World { turtle = turtle } 
+ 111          -> setxy x y world
+ 112          where
+ 113              (_,y) = turtle.position
+ 114  
+ 115  sety :: Float -> Instruction
+ 116  sety y world = case world of
+ 117      World { turtle = turtle } 
+ 118          -> setxy x y world
+ 119          where
+ 120              (x,_) = turtle.position
+ 121  
+ 122  setheading :: Float -> Instruction
+ 123  setheading h world = case world of
+ 124      World { turtle = turtle } 
+ 125          -> right (h-d) world
+ 126          where
+ 127              d = turtle.direction
+ 128  
+ 129  home :: Instruction
+ 130  home world = case world of
+ 131      World { turtle = turtle } 
+ 132          -> setheading 0 (setxy 0 0 world )
+ 133  
+ 134  arc :: Float -> Float -> Instruction
+ 135  arc t r world = case world of
+ 136      World { turtle = turtle }
+ 137          -> world { turtle = turtle { direction = turtle.direction + t }
+ 138                   , pict = bool blank selfimg' turtle.showme
+ 139                              <> tarc 
+ 140                   }
+ 141              where
+ 142                  selfimg' = translate x y $ rotate (d+t) turtle.selfimg
+ 143                  (x,y) = turtle.position
+ 144                  d = turtle.direction
+ 145                  tarc = translate x y $ thickArc (90-(d+p)) (90-d) r turtle.thic
+ 146  
+ 147  -- utilities
+ 148  
+ 149  newpos :: Float -> Float -> Point -> Point
+ 150  newpos dir d pos0 = pos0 G.+ diff
+ 151      where
+ 152          diff = d G.* unitVectorAtAngle a
+ 153          a = degToRad (90 - dir)
+ 154  
+ 155  spot :: Float -> Point -> Picture
+ 156  spot thc (x,y)
+ 157      = translate x y
+ 158      $ circleSolid (thc / 2)
+ 159  
+ 160  dispPict :: Picture -> IO ()
+ 161  dispPict pict = display FullScreen white pict
+ 162  
+ 163  thicLine :: Float -> Float -> Float -> Point -> Picture
+ 164  thicLine dis dir thc pos1 
+ 165      = spot thc pos1
+ 166      <> spot thc pos2
+ 167      <> translate x y (rotate dir $ rectangleSolid thc dis)
+ 168      where
+ 169          (x,y) = 0.5 G.* (pos1 G.+ pos2)
+ 170          pos2 = newpos dir dis pos1
+ 171  
+ 172  dispWorld :: World -> IO ()
+ 173  dispWorld world = dispPict world.pict
+Ok, no modules loaded.
+2022-10-20 19:16:52.947635292
+>>> :l src/World.hs
+[1 of 1] Compiling World            ( src/World.hs, interpreted )
+
+src/World.hs:145:56: error: Variable not in scope: p :: Float
+    |
+145 |                 tarc = translate x y $ thickArc (90-(d+p)) (90-d) r turtle.thic
+    |                                                        ^
+Failed, no modules loaded.
+2022-10-20 19:16:53.113083989
+>>> :e
+   1  {-# LANGUAGE DuplicateRecordFields #-}
+   2  {-# LANGUAGE NoFieldSelectors #-}
+   3  {-# LANGUAGE OverloadedRecordDot #-}
+   4  module World where
+   5  
+   6  import Data.Bool
+   7  import Graphics.Gloss
+   8  import Graphics.Gloss.Data.Color
+   9  import Graphics.Gloss.Data.Picture
+  10  import Graphics.Gloss.Data.Point
+  11  import qualified Graphics.Gloss.Data.Point.Arithmetic as G
+  12  import Graphics.Gloss.Data.Vector
+  13  import Graphics.Gloss.Geometry.Angle
+  14  
+  15  data World
+  16      = World
+  17      { turtle :: Turtle
+  18      , pict   :: Picture 
+  19      }
+  20      deriving (Eq, Show)
+  21  
+  22  defaultWorld :: World
+  23  defaultWorld = World { turtle = defaultTurtle 
+  24                       , pict = defaultTurtle.selfimg
+  25                       }
+  26  data Turtle
+  27      = Turtle
+  28      { position :: Point
+  29      , direction :: Float
+  30      , pen :: Updown
+  31      , thic :: Float
+  32      , color :: Color
+  33      , showme :: Bool
+  34      , selfimg :: Picture
+  35      }
+  36      deriving (Eq, Show)
+  37  
+  38  defaultTurtle :: Turtle
+  39  defaultTurtle = Turtle
+  40                { position = (0,0)
+  41                , direction = 60
+  42                , pen = Down
+  43                , thic = 10
+  44                , color = black
+  45                , showme = True
+  46                , selfimg = lineLoop [(-10,-10),(-10,10),(10,10),(10,-10),(-10,-10),(0,10),(10,-10)]
+  47                }
+  48  
+  49  data Updown
+  50      = Up
+  51      | Down
+  52      deriving (Eq, Show)
+  53  
+  54  --
+  55  
+  56  type Instruction = World -> World
+  57  
+  58  forward, fd :: Float -> Instruction
+  59  forward d world = case world of
+  60      World { turtle = turtle } 
+  61          -> world { turtle = turtle { position = (x',y') }
+  62                   , pict = bool blank selfimg' turtle.showme <> case turtle.pen of
+  63                      Up   -> blank
+  64                      Down -> thicLine d turtle.direction turtle.thic turtle.position
+  65                   }
+  66              where
+  67                  (x',y') = newpos turtle.direction d turtle.position
+  68                  selfimg' = translate x' y' (rotate turtle.direction turtle.selfimg)
+  69  
+  70  fd = forward
+  71  
+  72  back, bk :: Float -> Instruction
+  73  back = forward . negate
+  74  
+  75  bk = back
+  76  
+  77  left, lt :: Float -> Instruction
+  78  left = right . negate
+  79  
+  80  lt = left
+  81  
+  82  right, rt :: Float -> Instruction 
+  83  right dir world = case world of
+  84      World { turtle = turtle } 
+  85          -> world { turtle = turtle { direction = newdir }
+  86                   , pict = bool blank selfimg' turtle.showme
+  87                   }
+  88              where
+  89                  newdir = turtle.direction + dir
+  90                  selfimg' = uncurry translate turtle.position (rotate newdir turtle.selfimg)
+  91  
+  92  rt = right
+  93  
+  94  setxy :: Float -> Float -> Instruction
+  95  setxy x y world =  case world of
+  96      World { turtle = turtle } 
+  97          -> world { turtle = turtle { position = (x,y) }
+  98                   , pict = bool blank selfimg' turtle.showme <> case turtle.pen of
+  99                      Up   -> blank
+ 100                      Down -> thicLine dist dir turtle.thic turtle.position
+ 101                   }
+ 102              where
+ 103                  vec = (x,y) G.- turtle.position
+ 104                  dist = magV vec
+ 105                  dir = radToDeg (angleVV (0,1) vec)
+ 106                  selfimg' = translate x y turtle.selfimg
+ 107  
+ 108  setx :: Float -> Instruction
+ 109  setx x world = case world of
+ 110      World { turtle = turtle } 
+ 111          -> setxy x y world
+ 112          where
+ 113              (_,y) = turtle.position
+ 114  
+ 115  sety :: Float -> Instruction
+ 116  sety y world = case world of
+ 117      World { turtle = turtle } 
+ 118          -> setxy x y world
+ 119          where
+ 120              (x,_) = turtle.position
+ 121  
+ 122  setheading :: Float -> Instruction
+ 123  setheading h world = case world of
+ 124      World { turtle = turtle } 
+ 125          -> right (h-d) world
+ 126          where
+ 127              d = turtle.direction
+ 128  
+ 129  home :: Instruction
+ 130  home world = case world of
+ 131      World { turtle = turtle } 
+ 132          -> setheading 0 (setxy 0 0 world )
+ 133  
+ 134  arc :: Float -> Float -> Instruction
+ 135  arc t r world = case world of
+ 136      World { turtle = turtle }
+ 137          -> world { turtle = turtle { direction = turtle.direction + t }
+ 138                   , pict = bool blank selfimg' turtle.showme
+ 139                              <> tarc 
+ 140                   }
+ 141              where
+ 142                  selfimg' = translate x y $ rotate (d+t) turtle.selfimg
+ 143                  (x,y) = turtle.position
+ 144                  d = turtle.direction
+ 145                  tarc = translate x y $ thickArc (90-(d+t)) (90-d) r turtle.thic
+ 146  
+ 147  -- utilities
+ 148  
+ 149  newpos :: Float -> Float -> Point -> Point
+ 150  newpos dir d pos0 = pos0 G.+ diff
+ 151      where
+ 152          diff = d G.* unitVectorAtAngle a
+ 153          a = degToRad (90 - dir)
+ 154  
+ 155  spot :: Float -> Point -> Picture
+ 156  spot thc (x,y)
+ 157      = translate x y
+ 158      $ circleSolid (thc / 2)
+ 159  
+ 160  dispPict :: Picture -> IO ()
+ 161  dispPict pict = display FullScreen white pict
+ 162  
+ 163  thicLine :: Float -> Float -> Float -> Point -> Picture
+ 164  thicLine dis dir thc pos1 
+ 165      = spot thc pos1
+ 166      <> spot thc pos2
+ 167      <> translate x y (rotate dir $ rectangleSolid thc dis)
+ 168      where
+ 169          (x,y) = 0.5 G.* (pos1 G.+ pos2)
+ 170          pos2 = newpos dir dis pos1
+ 171  
+ 172  dispWorld :: World -> IO ()
+ 173  dispWorld world = dispPict world.pict
+[1 of 1] Compiling World            ( src/World.hs, interpreted )
+Ok, one module loaded.
+2022-10-20 19:17:08.878173422
+>>> dispWorld (arc 120 100 defaultWorld)
+
+<interactive>:4:12: error:
+    Ambiguous occurrence ‘arc’
+    It could refer to
+       either ‘Graphics.Gloss.Data.Picture.arc’,
+              imported from ‘Graphics.Gloss.Data.Picture’ at src/World.hs:9:1-34
+           or ‘World.arc’, defined at src/World.hs:135:1
+2022-10-20 19:18:17.298002001
+>>> :e
+   1  {-# LANGUAGE DuplicateRecordFields #-}
+   2  {-# LANGUAGE NoFieldSelectors #-}
+   3  {-# LANGUAGE OverloadedRecordDot #-}
+   4  module World where
+   5  
+   6  import Data.Bool
+   7  import Graphics.Gloss
+   8  import Graphics.Gloss.Data.Color
+   9  import qualified Graphics.Gloss.Data.Picture as G
+  10  import Graphics.Gloss.Data.Point
+  11  import qualified Graphics.Gloss.Data.Point.Arithmetic as G
+  12  import Graphics.Gloss.Data.Vector
+  13  import Graphics.Gloss.Geometry.Angle
+  14  
+  15  data World
+  16      = World
+  17      { turtle :: Turtle
+  18      , pict   :: Picture 
+  19      }
+  20      deriving (Eq, Show)
+  21  
+  22  defaultWorld :: World
+  23  defaultWorld = World { turtle = defaultTurtle 
+  24                       , pict = defaultTurtle.selfimg
+  25                       }
+  26  data Turtle
+  27      = Turtle
+  28      { position :: Point
+  29      , direction :: Float
+  30      , pen :: Updown
+  31      , thic :: Float
+  32      , color :: Color
+  33      , showme :: Bool
+  34      , selfimg :: Picture
+  35      }
+  36      deriving (Eq, Show)
+  37  
+  38  defaultTurtle :: Turtle
+  39  defaultTurtle = Turtle
+  40                { position = (0,0)
+  41                , direction = 60
+  42                , pen = Down
+  43                , thic = 10
+  44                , color = black
+  45                , showme = True
+  46                , selfimg = lineLoop [(-10,-10),(-10,10),(10,10),(10,-10),(-10,-10),(0,10),(10,-10)]
+  47                }
+  48  
+  49  data Updown
+  50      = Up
+  51      | Down
+  52      deriving (Eq, Show)
+  53  
+  54  --
+  55  
+  56  type Instruction = World -> World
+  57  
+  58  forward, fd :: Float -> Instruction
+  59  forward d world = case world of
+  60      World { turtle = turtle } 
+  61          -> world { turtle = turtle { position = (x',y') }
+  62                   , pict = bool blank selfimg' turtle.showme <> case turtle.pen of
+  63                      Up   -> blank
+  64                      Down -> thicLine d turtle.direction turtle.thic turtle.position
+  65                   }
+  66              where
+  67                  (x',y') = newpos turtle.direction d turtle.position
+  68                  selfimg' = translate x' y' (rotate turtle.direction turtle.selfimg)
+  69  
+  70  fd = forward
+  71  
+  72  back, bk :: Float -> Instruction
+  73  back = forward . negate
+  74  
+  75  bk = back
+  76  
+  77  left, lt :: Float -> Instruction
+  78  left = right . negate
+  79  
+  80  lt = left
+  81  
+  82  right, rt :: Float -> Instruction 
+  83  right dir world = case world of
+  84      World { turtle = turtle } 
+  85          -> world { turtle = turtle { direction = newdir }
+  86                   , pict = bool blank selfimg' turtle.showme
+  87                   }
+  88              where
+  89                  newdir = turtle.direction + dir
+  90                  selfimg' = uncurry translate turtle.position (rotate newdir turtle.selfimg)
+  91  
+  92  rt = right
+  93  
+  94  setxy :: Float -> Float -> Instruction
+  95  setxy x y world =  case world of
+  96      World { turtle = turtle } 
+  97          -> world { turtle = turtle { position = (x,y) }
+  98                   , pict = bool blank selfimg' turtle.showme <> case turtle.pen of
+  99                      Up   -> blank
+ 100                      Down -> thicLine dist dir turtle.thic turtle.position
+ 101                   }
+ 102              where
+ 103                  vec = (x,y) G.- turtle.position
+ 104                  dist = magV vec
+ 105                  dir = radToDeg (angleVV (0,1) vec)
+ 106                  selfimg' = translate x y turtle.selfimg
+ 107  
+ 108  setx :: Float -> Instruction
+ 109  setx x world = case world of
+ 110      World { turtle = turtle } 
+ 111          -> setxy x y world
+ 112          where
+ 113              (_,y) = turtle.position
+ 114  
+ 115  sety :: Float -> Instruction
+ 116  sety y world = case world of
+ 117      World { turtle = turtle } 
+ 118          -> setxy x y world
+ 119          where
+ 120              (x,_) = turtle.position
+ 121  
+ 122  setheading :: Float -> Instruction
+ 123  setheading h world = case world of
+ 124      World { turtle = turtle } 
+ 125          -> right (h-d) world
+ 126          where
+ 127              d = turtle.direction
+ 128  
+ 129  home :: Instruction
+ 130  home world = case world of
+ 131      World { turtle = turtle } 
+ 132          -> setheading 0 (setxy 0 0 world )
+ 133  
+ 134  arc :: Float -> Float -> Instruction
+ 135  arc t r world = case world of
+ 136      World { turtle = turtle }
+ 137          -> world { turtle = turtle { direction = turtle.direction + t }
+ 138                   , pict = bool blank selfimg' turtle.showme
+ 139                              <> tarc 
+ 140                   }
+ 141              where
+ 142                  selfimg' = translate x y $ rotate (d+t) turtle.selfimg
+ 143                  (x,y) = turtle.position
+ 144                  d = turtle.direction
+ 145                  tarc = translate x y $ thickArc (90-(d+t)) (90-d) r turtle.thic
+ 146  
+ 147  -- utilities
+ 148  
+ 149  newpos :: Float -> Float -> Point -> Point
+ 150  newpos dir d pos0 = pos0 G.+ diff
+ 151      where
+ 152          diff = d G.* unitVectorAtAngle a
+ 153          a = degToRad (90 - dir)
+ 154  
+ 155  spot :: Float -> Point -> Picture
+ 156  spot thc (x,y)
+ 157      = translate x y
+ 158      $ circleSolid (thc / 2)
+ 159  
+ 160  dispPict :: Picture -> IO ()
+ 161  dispPict pict = display FullScreen white pict
+ 162  
+ 163  thicLine :: Float -> Float -> Float -> Point -> Picture
+ 164  thicLine dis dir thc pos1 
+ 165      = spot thc pos1
+ 166      <> spot thc pos2
+ 167      <> translate x y (rotate dir $ rectangleSolid thc dis)
+ 168      where
+ 169          (x,y) = 0.5 G.* (pos1 G.+ pos2)
+ 170          pos2 = newpos dir dis pos1
+ 171  
+ 172  dispWorld :: World -> IO ()
+ 173  dispWorld world = dispPict world.pict
+[1 of 1] Compiling World            ( src/World.hs, interpreted )
+Ok, one module loaded.
+2022-10-20 19:20:18.158205435
+>>> :q
+Leaving GHCi.
+Stack has not been tested with GHC versions above 9.0, and using 9.2.4, this may fail
+Stack has not been tested with Cabal versions above 3.4, but version 3.6.3.0 was found, this may fail
+GHCi, version 9.2.4: https://www.haskell.org/ghc/  :? for help
+Loaded GHCi configuration from /home/nanaka/logo2022/.ghci
+2022-10-20 19:20:57.339772803
+>>> :e src/World.hs
+   1  {-# LANGUAGE DuplicateRecordFields #-}
+   2  {-# LANGUAGE NoFieldSelectors #-}
+   3  {-# LANGUAGE OverloadedRecordDot #-}
+   4  module World where
+   5  
+   6  import Data.Bool
+   7  import Graphics.Gloss
+   8  import Graphics.Gloss.Data.Color
+   9  import qualified Graphics.Gloss.Data.Picture as G
+  10  import Graphics.Gloss.Data.Point
+  11  import qualified Graphics.Gloss.Data.Point.Arithmetic as G
+  12  import Graphics.Gloss.Data.Vector
+  13  import Graphics.Gloss.Geometry.Angle
+  14  
+  15  data World
+  16      = World
+  17      { turtle :: Turtle
+  18      , pict   :: Picture 
+  19      }
+  20      deriving (Eq, Show)
+  21  
+  22  defaultWorld :: World
+  23  defaultWorld = World { turtle = defaultTurtle 
+  24                       , pict = defaultTurtle.selfimg
+  25                       }
+  26  data Turtle
+  27      = Turtle
+  28      { position :: Point
+  29      , direction :: Float
+  30      , pen :: Updown
+  31      , thic :: Float
+  32      , color :: Color
+  33      , showme :: Bool
+  34      , selfimg :: Picture
+  35      }
+  36      deriving (Eq, Show)
+  37  
+  38  defaultTurtle :: Turtle
+  39  defaultTurtle = Turtle
+  40                { position = (0,0)
+  41                , direction = 60
+  42                , pen = Down
+  43                , thic = 10
+  44                , color = black
+  45                , showme = True
+  46                , selfimg = lineLoop [(-10,-10),(-10,10),(10,10),(10,-10),(-10,-10),(0,10),(10,-10)]
+  47                }
+  48  
+  49  data Updown
+  50      = Up
+  51      | Down
+  52      deriving (Eq, Show)
+  53  
+  54  --
+  55  
+  56  type Instruction = World -> World
+  57  
+  58  forward, fd :: Float -> Instruction
+  59  forward d world = case world of
+  60      World { turtle = turtle } 
+  61          -> world { turtle = turtle { position = (x',y') }
+  62                   , pict = bool blank selfimg' turtle.showme <> case turtle.pen of
+  63                      Up   -> blank
+  64                      Down -> thicLine d turtle.direction turtle.thic turtle.position
+  65                   }
+  66              where
+  67                  (x',y') = newpos turtle.direction d turtle.position
+  68                  selfimg' = translate x' y' (rotate turtle.direction turtle.selfimg)
+  69  
+  70  fd = forward
+  71  
+  72  back, bk :: Float -> Instruction
+  73  back = forward . negate
+  74  
+  75  bk = back
+  76  
+  77  left, lt :: Float -> Instruction
+  78  left = right . negate
+  79  
+  80  lt = left
+  81  
+  82  right, rt :: Float -> Instruction 
+  83  right dir world = case world of
+  84      World { turtle = turtle } 
+  85          -> world { turtle = turtle { direction = newdir }
+  86                   , pict = bool blank selfimg' turtle.showme
+  87                   }
+  88              where
+  89                  newdir = turtle.direction + dir
+  90                  selfimg' = uncurry translate turtle.position (rotate newdir turtle.selfimg)
+  91  
+  92  rt = right
+  93  
+  94  setxy :: Float -> Float -> Instruction
+  95  setxy x y world =  case world of
+  96      World { turtle = turtle } 
+  97          -> world { turtle = turtle { position = (x,y) }
+  98                   , pict = bool blank selfimg' turtle.showme <> case turtle.pen of
+  99                      Up   -> blank
+ 100                      Down -> thicLine dist dir turtle.thic turtle.position
+ 101                   }
+ 102              where
+ 103                  vec = (x,y) G.- turtle.position
+ 104                  dist = magV vec
+ 105                  dir = radToDeg (angleVV (0,1) vec)
+ 106                  selfimg' = translate x y turtle.selfimg
+ 107  
+ 108  setx :: Float -> Instruction
+ 109  setx x world = case world of
+ 110      World { turtle = turtle } 
+ 111          -> setxy x y world
+ 112          where
+ 113              (_,y) = turtle.position
+ 114  
+ 115  sety :: Float -> Instruction
+ 116  sety y world = case world of
+ 117      World { turtle = turtle } 
+ 118          -> setxy x y world
+ 119          where
+ 120              (x,_) = turtle.position
+ 121  
+ 122  setheading :: Float -> Instruction
+ 123  setheading h world = case world of
+ 124      World { turtle = turtle } 
+ 125          -> right (h-d) world
+ 126          where
+ 127              d = turtle.direction
+ 128  
+ 129  home :: Instruction
+ 130  home world = case world of
+ 131      World { turtle = turtle } 
+ 132          -> setheading 0 (setxy 0 0 world )
+ 133  
+ 134  arc :: Float -> Float -> Instruction
+ 135  arc t r world = case world of
+ 136      World { turtle = turtle }
+ 137          -> world { turtle = turtle { direction = turtle.direction + t }
+ 138                   , pict = bool blank selfimg' turtle.showme
+ 139                              <> tarc 
+ 140                   }
+ 141              where
+ 142                  selfimg' = translate x y $ rotate (d+t) turtle.selfimg
+ 143                  (x,y) = turtle.position
+ 144                  d = turtle.direction
+ 145                  tarc = translate x y $ thickArc (90-(d+t)) (90-d) r turtle.thic
+ 146  
+ 147  -- utilities
+ 148  
+ 149  newpos :: Float -> Float -> Point -> Point
+ 150  newpos dir d pos0 = pos0 G.+ diff
+ 151      where
+ 152          diff = d G.* unitVectorAtAngle a
+ 153          a = degToRad (90 - dir)
+ 154  
+ 155  spot :: Float -> Point -> Picture
+ 156  spot thc (x,y)
+ 157      = translate x y
+ 158      $ circleSolid (thc / 2)
+ 159  
+ 160  dispPict :: Picture -> IO ()
+ 161  dispPict pict = display FullScreen white pict
+ 162  
+ 163  thicLine :: Float -> Float -> Float -> Point -> Picture
+ 164  thicLine dis dir thc pos1 
+ 165      = spot thc pos1
+ 166      <> spot thc pos2
+ 167      <> translate x y (rotate dir $ rectangleSolid thc dis)
+ 168      where
+ 169          (x,y) = 0.5 G.* (pos1 G.+ pos2)
+ 170          pos2 = newpos dir dis pos1
+ 171  
+ 172  dispWorld :: World -> IO ()
+ 173  dispWorld world = dispPict world.pict
+Ok, no modules loaded.
+2022-10-20 19:21:05.621874084
+>>> :l src/World.hs
+[1 of 1] Compiling World            ( src/World.hs, interpreted )
+Ok, one module loaded.
+2022-10-20 19:21:05.896552189
+>>> dispWorld (arc 120 100 defaultWorld)
+
+<interactive>:3:12: error:
+    Ambiguous occurrence ‘arc’
+    It could refer to
+       either ‘Graphics.Gloss.arc’,
+              imported from ‘Graphics.Gloss’ at src/World.hs:7:1-21
+              (and originally defined in ‘Graphics.Gloss.Data.Picture’)
+           or ‘World.arc’, defined at src/World.hs:135:1
+2022-10-20 19:21:22.678871899
+>>> dispWorld (World.arc 120 100 defaultWorld)
+<interactive>: interrupted
+<interactive>: warning: too many hs_exit()s
+Stack has not been tested with GHC versions above 9.0, and using 9.2.4, this may fail
+Stack has not been tested with Cabal versions above 3.4, but version 3.6.3.0 was found, this may fail
+GHCi, version 9.2.4: https://www.haskell.org/ghc/  :? for help
+Loaded GHCi configuration from /home/nanaka/logo2022/.ghci
+2022-10-20 19:26:48.856226051
+>>> :e src/World.hs
+   1  {-# LANGUAGE DuplicateRecordFields #-}
+   2  {-# LANGUAGE NoFieldSelectors #-}
+   3  {-# LANGUAGE OverloadedRecordDot #-}
+   4  module World where
+   5  
+   6  import Data.Bool
+   7  import Graphics.Gloss
+   8  import Graphics.Gloss.Data.Color
+   9  import qualified Graphics.Gloss.Data.Picture as G
+  10  import Graphics.Gloss.Data.Point
+  11  import qualified Graphics.Gloss.Data.Point.Arithmetic as G
+  12  import Graphics.Gloss.Data.Vector
+  13  import Graphics.Gloss.Geometry.Angle
+  14  
+  15  data World
+  16      = World
+  17      { turtle :: Turtle
+  18      , pict   :: Picture 
+  19      }
+  20      deriving (Eq, Show)
+  21  
+  22  defaultWorld :: World
+  23  defaultWorld = World { turtle = defaultTurtle 
+  24                       , pict = defaultTurtle.selfimg
+  25                       }
+  26  data Turtle
+  27      = Turtle
+  28      { position :: Point
+  29      , direction :: Float
+  30      , pen :: Updown
+  31      , thic :: Float
+  32      , color :: Color
+  33      , showme :: Bool
+  34      , selfimg :: Picture
+  35      }
+  36      deriving (Eq, Show)
+  37  
+  38  defaultTurtle :: Turtle
+  39  defaultTurtle = Turtle
+  40                { position = (0,0)
+  41                , direction = 60
+  42                , pen = Down
+  43                , thic = 10
+  44                , color = black
+  45                , showme = True
+  46                , selfimg = lineLoop [(-10,-10),(-10,10),(10,10),(10,-10),(-10,-10),(0,10),(10,-10)]
+  47                }
+  48  
+  49  data Updown
+  50      = Up
+  51      | Down
+  52      deriving (Eq, Show)
+  53  
+  54  --
+  55  
+  56  type Instruction = World -> World
+  57  
+  58  forward, fd :: Float -> Instruction
+  59  forward d world = case world of
+  60      World { turtle = turtle } 
+  61          -> world { turtle = turtle { position = (x',y') }
+  62                   , pict = bool blank selfimg' turtle.showme <> case turtle.pen of
+  63                      Up   -> blank
+  64                      Down -> thicLine d turtle.direction turtle.thic turtle.position
+  65                   }
+  66              where
+  67                  (x',y') = newpos turtle.direction d turtle.position
+  68                  selfimg' = translate x' y' (rotate turtle.direction turtle.selfimg)
+  69  
+  70  fd = forward
+  71  
+  72  back, bk :: Float -> Instruction
+  73  back = forward . negate
+  74  
+  75  bk = back
+  76  
+  77  left, lt :: Float -> Instruction
+  78  left = right . negate
+  79  
+  80  lt = left
+  81  
+  82  right, rt :: Float -> Instruction 
+  83  right dir world = case world of
+  84      World { turtle = turtle } 
+  85          -> world { turtle = turtle { direction = newdir }
+  86                   , pict = bool blank selfimg' turtle.showme
+  87                   }
+  88              where
+  89                  newdir = turtle.direction + dir
+  90                  selfimg' = uncurry translate turtle.position (rotate newdir turtle.selfimg)
+  91  
+  92  rt = right
+  93  
+  94  setxy :: Float -> Float -> Instruction
+  95  setxy x y world =  case world of
+  96      World { turtle = turtle } 
+  97          -> world { turtle = turtle { position = (x,y) }
+  98                   , pict = bool blank selfimg' turtle.showme <> case turtle.pen of
+  99                      Up   -> blank
+ 100                      Down -> thicLine dist dir turtle.thic turtle.position
+ 101                   }
+ 102              where
+ 103                  vec = (x,y) G.- turtle.position
+ 104                  dist = magV vec
+ 105                  dir = radToDeg (angleVV (0,1) vec)
+ 106                  selfimg' = translate x y turtle.selfimg
+ 107  
+ 108  setx :: Float -> Instruction
+ 109  setx x world = case world of
+ 110      World { turtle = turtle } 
+ 111          -> setxy x y world
+ 112          where
+ 113              (_,y) = turtle.position
+ 114  
+ 115  sety :: Float -> Instruction
+ 116  sety y world = case world of
+ 117      World { turtle = turtle } 
+ 118          -> setxy x y world
+ 119          where
+ 120              (x,_) = turtle.position
+ 121  
+ 122  setheading :: Float -> Instruction
+ 123  setheading h world = case world of
+ 124      World { turtle = turtle } 
+ 125          -> right (h-d) world
+ 126          where
+ 127              d = turtle.direction
+ 128  
+ 129  home :: Instruction
+ 130  home world = case world of
+ 131      World { turtle = turtle } 
+ 132          -> setheading 0 (setxy 0 0 world )
+ 133  
+ 134  arc :: Float -> Float -> Instruction
+ 135  arc t r world = case world of
+ 136      World { turtle = turtle }
+ 137          -> world { turtle = turtle { direction = turtle.direction + t }
+ 138                   , pict = bool blank selfimg' turtle.showme
+ 139                              <> tarc 
+ 140                   }
+ 141              where
+ 142                  selfimg' = translate x y $ rotate (d+t) turtle.selfimg
+ 143                  (x,y) = turtle.position
+ 144                  d = turtle.direction
+ 145                  tarc = translate x y $ thickArc (90-d) (90-(d+t)) r turtle.thic
+ 146  
+ 147  -- utilities
+ 148  
+ 149  newpos :: Float -> Float -> Point -> Point
+ 150  newpos dir d pos0 = pos0 G.+ diff
+ 151      where
+ 152          diff = d G.* unitVectorAtAngle a
+ 153          a = degToRad (90 - dir)
+ 154  
+ 155  spot :: Float -> Point -> Picture
+ 156  spot thc (x,y)
+ 157      = translate x y
+ 158      $ circleSolid (thc / 2)
+ 159  
+ 160  dispPict :: Picture -> IO ()
+ 161  dispPict pict = display FullScreen white pict
+ 162  
+ 163  thicLine :: Float -> Float -> Float -> Point -> Picture
+ 164  thicLine dis dir thc pos1 
+ 165      = spot thc pos1
+ 166      <> spot thc pos2
+ 167      <> translate x y (rotate dir $ rectangleSolid thc dis)
+ 168      where
+ 169          (x,y) = 0.5 G.* (pos1 G.+ pos2)
+ 170          pos2 = newpos dir dis pos1
+ 171  
+ 172  dispWorld :: World -> IO ()
+ 173  dispWorld world = dispPict world.pict
+Ok, no modules loaded.
+2022-10-20 19:26:52.080585593
+>>> :l src/World.hs
+[1 of 1] Compiling World            ( src/World.hs, interpreted )
+Ok, one module loaded.
+2022-10-20 19:26:52.352043572
+>>> dispWorld (World.arc 120 100 defaultWorld)
+<interactive>: interrupted
+<interactive>: warning: too many hs_exit()s
+Stack has not been tested with GHC versions above 9.0, and using 9.2.4, this may fail
+Stack has not been tested with Cabal versions above 3.4, but version 3.6.3.0 was found, this may fail
+GHCi, version 9.2.4: https://www.haskell.org/ghc/  :? for help
+Loaded GHCi configuration from /home/nanaka/logo2022/.ghci
+2022-10-20 19:33:00.204017056
+>>> :e src/World.hs
+   1  {-# LANGUAGE DuplicateRecordFields #-}
+   2  {-# LANGUAGE NoFieldSelectors #-}
+   3  {-# LANGUAGE OverloadedRecordDot #-}
+   4  module World where
+   5  
+   6  import Data.Bool
+   7  import Graphics.Gloss
+   8  import Graphics.Gloss.Data.Color
+   9  import qualified Graphics.Gloss.Data.Picture as G
+  10  import Graphics.Gloss.Data.Point
+  11  import qualified Graphics.Gloss.Data.Point.Arithmetic as G
+  12  import Graphics.Gloss.Data.Vector
+  13  import Graphics.Gloss.Geometry.Angle
+  14  
+  15  data World
+  16      = World
+  17      { turtle :: Turtle
+  18      , pict   :: Picture 
+  19      }
+  20      deriving (Eq, Show)
+  21  
+  22  defaultWorld :: World
+  23  defaultWorld = World { turtle = defaultTurtle 
+  24                       , pict = defaultTurtle.selfimg
+  25                       }
+  26  data Turtle
+  27      = Turtle
+  28      { position :: Point
+  29      , direction :: Float
+  30      , pen :: Updown
+  31      , thic :: Float
+  32      , color :: Color
+  33      , showme :: Bool
+  34      , selfimg :: Picture
+  35      }
+  36      deriving (Eq, Show)
+  37  
+  38  defaultTurtle :: Turtle
+  39  defaultTurtle = Turtle
+  40                { position = (0,0)
+  41                , direction = 60
+  42                , pen = Down
+  43                , thic = 10
+  44                , color = black
+  45                , showme = True
+  46                , selfimg = lineLoop [(-10,-10),(-10,10),(10,10),(10,-10),(-10,-10),(0,10),(10,-10)]
+  47                }
+  48  
+  49  data Updown
+  50      = Up
+  51      | Down
+  52      deriving (Eq, Show)
+  53  
+  54  --
+  55  
+  56  type Instruction = World -> World
+  57  
+  58  forward, fd :: Float -> Instruction
+  59  forward d world = case world of
+  60      World { turtle = turtle } 
+  61          -> world { turtle = turtle { position = (x',y') }
+  62                   , pict = bool blank selfimg' turtle.showme <> case turtle.pen of
+  63                      Up   -> blank
+  64                      Down -> thicLine d turtle.direction turtle.thic turtle.position
+  65                   }
+  66              where
+  67                  (x',y') = newpos turtle.direction d turtle.position
+  68                  selfimg' = translate x' y' (rotate turtle.direction turtle.selfimg)
+  69  
+  70  fd = forward
+  71  
+  72  back, bk :: Float -> Instruction
+  73  back = forward . negate
+  74  
+  75  bk = back
+  76  
+  77  left, lt :: Float -> Instruction
+  78  left = right . negate
+  79  
+  80  lt = left
+  81  
+  82  right, rt :: Float -> Instruction 
+  83  right dir world = case world of
+  84      World { turtle = turtle } 
+  85          -> world { turtle = turtle { direction = newdir }
+  86                   , pict = bool blank selfimg' turtle.showme
+  87                   }
+  88              where
+  89                  newdir = turtle.direction + dir
+  90                  selfimg' = uncurry translate turtle.position (rotate newdir turtle.selfimg)
+  91  
+  92  rt = right
+  93  
+  94  setxy :: Float -> Float -> Instruction
+  95  setxy x y world =  case world of
+  96      World { turtle = turtle } 
+  97          -> world { turtle = turtle { position = (x,y) }
+  98                   , pict = bool blank selfimg' turtle.showme <> case turtle.pen of
+  99                      Up   -> blank
+ 100                      Down -> thicLine dist dir turtle.thic turtle.position
+ 101                   }
+ 102              where
+ 103                  vec = (x,y) G.- turtle.position
+ 104                  dist = magV vec
+ 105                  dir = radToDeg (angleVV (0,1) vec)
+ 106                  selfimg' = translate x y turtle.selfimg
+ 107  
+ 108  setx :: Float -> Instruction
+ 109  setx x world = case world of
+ 110      World { turtle = turtle } 
+ 111          -> setxy x y world
+ 112          where
+ 113              (_,y) = turtle.position
+ 114  
+ 115  sety :: Float -> Instruction
+ 116  sety y world = case world of
+ 117      World { turtle = turtle } 
+ 118          -> setxy x y world
+ 119          where
+ 120              (x,_) = turtle.position
+ 121  
+ 122  setheading :: Float -> Instruction
+ 123  setheading h world = case world of
+ 124      World { turtle = turtle } 
+ 125          -> right (h-d) world
+ 126          where
+ 127              d = turtle.direction
+ 128  
+ 129  home :: Instruction
+ 130  home world = case world of
+ 131      World { turtle = turtle } 
+ 132          -> setheading 0 (setxy 0 0 world )
+ 133  
+ 134  arc :: Float -> Float -> Instruction
+ 135  arc t r world = case world of
+ 136      World { turtle = turtle }
+ 137          -> world { turtle = turtle { direction = turtle.direction + t }
+ 138                   , pict = bool blank selfimg' turtle.showme
+ 139                              <> tarc 
+ 140                   }
+ 141              where
+ 142                  selfimg' = translate x y $ rotate (d+t) turtle.selfimg
+ 143                  (x,y) = turtle.position
+ 144                  d = turtle.direction
+ 145                  tarc = translate x y $ thickArc 0 90 r turtle.thic
+ 146  
+ 147  -- utilities
+ 148  
+ 149  newpos :: Float -> Float -> Point -> Point
+ 150  newpos dir d pos0 = pos0 G.+ diff
+ 151      where
+ 152          diff = d G.* unitVectorAtAngle a
+ 153          a = degToRad (90 - dir)
+ 154  
+ 155  spot :: Float -> Point -> Picture
+ 156  spot thc (x,y)
+ 157      = translate x y
+ 158      $ circleSolid (thc / 2)
+ 159  
+ 160  dispPict :: Picture -> IO ()
+ 161  dispPict pict = display FullScreen white pict
+ 162  
+ 163  thicLine :: Float -> Float -> Float -> Point -> Picture
+ 164  thicLine dis dir thc pos1 
+ 165      = spot thc pos1
+ 166      <> spot thc pos2
+ 167      <> translate x y (rotate dir $ rectangleSolid thc dis)
+ 168      where
+ 169          (x,y) = 0.5 G.* (pos1 G.+ pos2)
+ 170          pos2 = newpos dir dis pos1
+ 171  
+ 172  dispWorld :: World -> IO ()
+ 173  dispWorld world = dispPict world.pict
+Ok, no modules loaded.
+2022-10-20 19:33:02.962899533
+>>> :l src/World.hs
+[1 of 1] Compiling World            ( src/World.hs, interpreted )
+Ok, one module loaded.
+2022-10-20 19:33:03.199645218
+>>> dispWorld (World.arc 120 100 defaultWorld)
+<interactive>: interrupted
+<interactive>: warning: too many hs_exit()s
+Stack has not been tested with GHC versions above 9.0, and using 9.2.4, this may fail
+Stack has not been tested with Cabal versions above 3.4, but version 3.6.3.0 was found, this may fail
+GHCi, version 9.2.4: https://www.haskell.org/ghc/  :? for help
+Loaded GHCi configuration from /home/nanaka/logo2022/.ghci
+2022-10-20 19:35:09.889940045
+>>> :e src/World.hs
+   1  {-# LANGUAGE DuplicateRecordFields #-}
+   2  {-# LANGUAGE NoFieldSelectors #-}
+   3  {-# LANGUAGE OverloadedRecordDot #-}
+   4  module World where
+   5  
+   6  import Data.Bool
+   7  import Graphics.Gloss
+   8  import Graphics.Gloss.Data.Color
+   9  import qualified Graphics.Gloss.Data.Picture as G
+  10  import Graphics.Gloss.Data.Point
+  11  import qualified Graphics.Gloss.Data.Point.Arithmetic as G
+  12  import Graphics.Gloss.Data.Vector
+  13  import Graphics.Gloss.Geometry.Angle
+  14  
+  15  data World
+  16      = World
+  17      { turtle :: Turtle
+  18      , pict   :: Picture 
+  19      }
+  20      deriving (Eq, Show)
+  21  
+  22  defaultWorld :: World
+  23  defaultWorld = World { turtle = defaultTurtle 
+  24                       , pict = defaultTurtle.selfimg
+  25                       }
+  26  data Turtle
+  27      = Turtle
+  28      { position :: Point
+  29      , direction :: Float
+  30      , pen :: Updown
+  31      , thic :: Float
+  32      , color :: Color
+  33      , showme :: Bool
+  34      , selfimg :: Picture
+  35      }
+  36      deriving (Eq, Show)
+  37  
+  38  defaultTurtle :: Turtle
+  39  defaultTurtle = Turtle
+  40                { position = (0,0)
+  41                , direction = 60
+  42                , pen = Down
+  43                , thic = 10
+  44                , color = black
+  45                , showme = True
+  46                , selfimg = lineLoop [(-10,-10),(-10,10),(10,10),(10,-10),(-10,-10),(0,10),(10,-10)]
+  47                }
+  48  
+  49  data Updown
+  50      = Up
+  51      | Down
+  52      deriving (Eq, Show)
+  53  
+  54  --
+  55  
+  56  type Instruction = World -> World
+  57  
+  58  forward, fd :: Float -> Instruction
+  59  forward d world = case world of
+  60      World { turtle = turtle } 
+  61          -> world { turtle = turtle { position = (x',y') }
+  62                   , pict = bool blank selfimg' turtle.showme <> case turtle.pen of
+  63                      Up   -> blank
+  64                      Down -> thicLine d turtle.direction turtle.thic turtle.position
+  65                   }
+  66              where
+  67                  (x',y') = newpos turtle.direction d turtle.position
+  68                  selfimg' = translate x' y' (rotate turtle.direction turtle.selfimg)
+  69  
+  70  fd = forward
+  71  
+  72  back, bk :: Float -> Instruction
+  73  back = forward . negate
+  74  
+  75  bk = back
+  76  
+  77  left, lt :: Float -> Instruction
+  78  left = right . negate
+  79  
+  80  lt = left
+  81  
+  82  right, rt :: Float -> Instruction 
+  83  right dir world = case world of
+  84      World { turtle = turtle } 
+  85          -> world { turtle = turtle { direction = newdir }
+  86                   , pict = bool blank selfimg' turtle.showme
+  87                   }
+  88              where
+  89                  newdir = turtle.direction + dir
+  90                  selfimg' = uncurry translate turtle.position (rotate newdir turtle.selfimg)
+  91  
+  92  rt = right
+  93  
+  94  setxy :: Float -> Float -> Instruction
+  95  setxy x y world =  case world of
+  96      World { turtle = turtle } 
+  97          -> world { turtle = turtle { position = (x,y) }
+  98                   , pict = bool blank selfimg' turtle.showme <> case turtle.pen of
+  99                      Up   -> blank
+ 100                      Down -> thicLine dist dir turtle.thic turtle.position
+ 101                   }
+ 102              where
+ 103                  vec = (x,y) G.- turtle.position
+ 104                  dist = magV vec
+ 105                  dir = radToDeg (angleVV (0,1) vec)
+ 106                  selfimg' = translate x y turtle.selfimg
+ 107  
+ 108  setx :: Float -> Instruction
+ 109  setx x world = case world of
+ 110      World { turtle = turtle } 
+ 111          -> setxy x y world
+ 112          where
+ 113              (_,y) = turtle.position
+ 114  
+ 115  sety :: Float -> Instruction
+ 116  sety y world = case world of
+ 117      World { turtle = turtle } 
+ 118          -> setxy x y world
+ 119          where
+ 120              (x,_) = turtle.position
+ 121  
+ 122  setheading :: Float -> Instruction
+ 123  setheading h world = case world of
+ 124      World { turtle = turtle } 
+ 125          -> right (h-d) world
+ 126          where
+ 127              d = turtle.direction
+ 128  
+ 129  home :: Instruction
+ 130  home world = case world of
+ 131      World { turtle = turtle } 
+ 132          -> setheading 0 (setxy 0 0 world )
+ 133  
+ 134  arc :: Float -> Float -> Instruction
+ 135  arc t r world = case world of
+ 136      World { turtle = turtle }
+ 137          -> world { turtle = turtle { direction = turtle.direction + t }
+ 138                   , pict = bool blank selfimg' turtle.showme
+ 139                              <> tarc 
+ 140                   }
+ 141              where
+ 142                  selfimg' = translate x y $ rotate (d+t) turtle.selfimg
+ 143                  (x,y) = turtle.position
+ 144                  d = turtle.direction
+ 145                  tarc = translate x y $ rotate d $ thickArc 0 t r turtle.thic
+ 146  
+ 147  -- utilities
+ 148  
+ 149  newpos :: Float -> Float -> Point -> Point
+ 150  newpos dir d pos0 = pos0 G.+ diff
+ 151      where
+ 152          diff = d G.* unitVectorAtAngle a
+ 153          a = degToRad (90 - dir)
+ 154  
+ 155  spot :: Float -> Point -> Picture
+ 156  spot thc (x,y)
+ 157      = translate x y
+ 158      $ circleSolid (thc / 2)
+ 159  
+ 160  dispPict :: Picture -> IO ()
+ 161  dispPict pict = display FullScreen white pict
+ 162  
+ 163  thicLine :: Float -> Float -> Float -> Point -> Picture
+ 164  thicLine dis dir thc pos1 
+ 165      = spot thc pos1
+ 166      <> spot thc pos2
+ 167      <> translate x y (rotate dir $ rectangleSolid thc dis)
+ 168      where
+ 169          (x,y) = 0.5 G.* (pos1 G.+ pos2)
+ 170          pos2 = newpos dir dis pos1
+ 171  
+ 172  dispWorld :: World -> IO ()
+ 173  dispWorld world = dispPict world.pict
+Ok, no modules loaded.
+2022-10-20 19:35:11.79541933
+>>> :l src/World.hs
+[1 of 1] Compiling World            ( src/World.hs, interpreted )
+Ok, one module loaded.
+2022-10-20 19:35:12.030474539
+>>> dispWorld (World.arc 120 100 defaultWorld)
+<interactive>: interrupted
+<interactive>: warning: too many hs_exit()s
+Stack has not been tested with GHC versions above 9.0, and using 9.2.4, this may fail
+Stack has not been tested with Cabal versions above 3.4, but version 3.6.3.0 was found, this may fail
+GHCi, version 9.2.4: https://www.haskell.org/ghc/  :? for help
+Loaded GHCi configuration from /home/nanaka/logo2022/.ghci
+2022-10-27 19:22:47.09434105
+>>> :e src/World.hs
+   1  {-# LANGUAGE DuplicateRecordFields #-}
+   2  {-# LANGUAGE NoFieldSelectors #-}
+   3  {-# LANGUAGE OverloadedRecordDot #-}
+   4  module World where
+   5  
+   6  import Data.Bool
+   7  import Graphics.Gloss
+   8  import Graphics.Gloss.Data.Color
+   9  import qualified Graphics.Gloss.Data.Picture as G
+  10  import Graphics.Gloss.Data.Point
+  11  import qualified Graphics.Gloss.Data.Point.Arithmetic as G
+  12  import Graphics.Gloss.Data.Vector
+  13  import Graphics.Gloss.Geometry.Angle
+  14  
+  15  data World
+  16      = World
+  17      { turtle :: Turtle
+  18      , pict   :: Maybe Picture 
+  19      }
+  20      deriving (Eq, Show)
+  21  
+  22  defaultWorld :: World
+  23  defaultWorld = World { turtle = defaultTurtle 
+  24                       , pict = Just defaultTurtle.selfimg
+  25                       }
+  26  data Turtle
+  27      = Turtle
+  28      { position :: Point
+  29      , direction :: Float
+  30      , pen :: Updown
+  31      , thic :: Float
+  32      , color :: Color
+  33      , showme :: Bool
+  34      , selfimg :: Picture
+  35      }
+  36      deriving (Eq, Show)
+  37  
+  38  defaultTurtle :: Turtle
+  39  defaultTurtle = Turtle
+  40                { position = (0,0)
+  41                , direction = 60
+  42                , pen = Down
+  43                , thic = 10
+  44                , color = black
+  45                , showme = True
+  46                , selfimg = lineLoop [(-10,-10),(-10,10),(10,10),(10,-10),(-10,-10),(0,10),(10,-10)]
+  47                }
+  48  
+  49  data Updown
+  50      = Up
+  51      | Down
+  52      deriving (Eq, Show)
+  53  
+  54  --
+  55  
+  56  type Instruction = World -> World
+  57  
+  58  forward, fd :: Float -> Instruction
+  59  forward d world = case world of
+  60      World { turtle = turtle } 
+  61          -> world { turtle = turtle { position = (x',y') }
+  62                   , pict = Just $ bool blank selfimg' turtle.showme <> case turtle.pen of
+  63                      Up   -> blank
+  64                      Down -> thicLine d turtle.direction turtle.thic turtle.position
+  65                   }
+  66              where
+  67                  (x',y') = newpos turtle.direction d turtle.position
+  68                  selfimg' = translate x' y' (rotate turtle.direction turtle.selfimg)
+  69  
+  70  fd = forward
+  71  
+  72  back, bk :: Float -> Instruction
+  73  back = forward . negate
+  74  
+  75  bk = back
+  76  
+  77  left, lt :: Float -> Instruction
+  78  left = right . negate
+  79  
+  80  lt = left
+  81  
+  82  right, rt :: Float -> Instruction 
+  83  right dir world = case world of
+  84      World { turtle = turtle } 
+  85          -> world { turtle = turtle { direction = newdir }
+  86                   , pict = Just $ bool blank selfimg' turtle.showme
+  87                   }
+  88              where
+  89                  newdir = turtle.direction + dir
+  90                  selfimg' = uncurry translate turtle.position (rotate newdir turtle.selfimg)
+  91  
+  92  rt = right
+  93  
+  94  setxy :: Float -> Float -> Instruction
+  95  setxy x y world =  case world of
+  96      World { turtle = turtle } 
+  97          -> world { turtle = turtle { position = (x,y) }
+  98                   , pict = Just $ bool blank selfimg' turtle.showme <> case turtle.pen of
+  99                      Up   -> blank
+ 100                      Down -> thicLine dist dir turtle.thic turtle.position
+ 101                   }
+ 102              where
+ 103                  vec = (x,y) G.- turtle.position
+ 104                  dist = magV vec
+ 105                  dir = radToDeg (angleVV (0,1) vec)
+ 106                  selfimg' = translate x y turtle.selfimg
+ 107  
+ 108  setx :: Float -> Instruction
+ 109  setx x world = case world of
+ 110      World { turtle = turtle } 
+ 111          -> setxy x y world
+ 112          where
+ 113              (_,y) = turtle.position
+ 114  
+ 115  sety :: Float -> Instruction
+ 116  sety y world = case world of
+ 117      World { turtle = turtle } 
+ 118          -> setxy x y world
+ 119          where
+ 120              (x,_) = turtle.position
+ 121  
+ 122  setheading :: Float -> Instruction
+ 123  setheading h world = case world of
+ 124      World { turtle = turtle } 
+ 125          -> right (h-d) world
+ 126          where
+ 127              d = turtle.direction
+ 128  
+ 129  home :: Instruction
+ 130  home world = case world of
+ 131      World { turtle = turtle } 
+ 132          -> setheading 0 (setxy 0 0 world )
+ 133  
+ 134  arc :: Float -> Float -> Instruction
+ 135  arc t r world = case world of
+ 136      World { turtle = turtle }
+ 137          -> world { turtle = turtle { direction = turtle.direction + t }
+ 138                   , pict = Just $ bool blank selfimg' turtle.showme
+ 139                              <> tarc 
+ 140                   }
+ 141              where
+ 142                  selfimg' = translate x y $ rotate (d+t) turtle.selfimg
+ 143                  (x,y) = turtle.position
+ 144                  d = turtle.direction
+ 145                  tarc = translate x y $ rotate d $ thickArc 0 t r turtle.thic
+ 146  
+ 147  penup :: Instruction 
+ 148  penup world = case world of
+ 149      World { turtle = turtle }
+ 150          -> world { turtle = turtle { pen = Up }
+ 151                   }
+ 152  
+ 153  pendown :: Instruction 
+ 154  pendown world = case world of
+ 155      World { turtle = turtle }
+ 156          -> world { turtle = turtle { pen = Down }
+ 157                   }
+ 158  
+ 159  clean :: Instruction
+ 160  clean world = world { pict = Nothing }
+ 161  
+ 162  clearscreen :: Instruction
+ 163  clearscreen = clean . home
+ 164  
+ 165  -- utilities
+ 166  
+ 167  newpos :: Float -> Float -> Point -> Point
+ 168  newpos dir d pos0 = pos0 G.+ diff
+ 169      where
+ 170          diff = d G.* unitVectorAtAngle a
+ 171          a = degToRad (90 - dir)
+ 172  
+ 173  spot :: Float -> Point -> Picture
+ 174  spot thc (x,y)
+ 175      = translate x y
+ 176      $ circleSolid (thc / 2)
+ 177  
+ 178  dispPict :: Picture -> IO ()
+ 179  dispPict pict = display FullScreen white pict
+ 180  
+ 181  thicLine :: Float -> Float -> Float -> Point -> Picture
+ 182  thicLine dis dir thc pos1 
+ 183      = spot thc pos1
+ 184      <> spot thc pos2
+ 185      <> translate x y (rotate dir $ rectangleSolid thc dis)
+ 186      where
+ 187          (x,y) = 0.5 G.* (pos1 G.+ pos2)
+ 188          pos2 = newpos dir dis pos1
+ 189  
+ 190  dispWorld :: World -> IO ()
+ 191  dispWorld world = maybe (dispPict blank) dispPict world.pict
+Ok, no modules loaded.
+2022-10-27 19:23:00.027436589
+>>> :l src/World.hs
+[1 of 1] Compiling World            ( src/World.hs, interpreted )
+Ok, one module loaded.
+2022-10-27 19:23:00.407787081
+>>> dispWorld (fd 200 defaultWorld)
+<interactive>: interrupted
+<interactive>: warning: too many hs_exit()s
+Stack has not been tested with GHC versions above 9.0, and using 9.2.4, this may fail
+Stack has not been tested with Cabal versions above 3.4, but version 3.6.3.0 was found, this may fail
+GHCi, version 9.2.4: https://www.haskell.org/ghc/  :? for help
+Loaded GHCi configuration from /home/nanaka/logo2022/.ghci
+2022-10-27 19:25:33.419933139
+>>> :e src/World.hs
+   1  {-# LANGUAGE DuplicateRecordFields #-}
+   2  {-# LANGUAGE NoFieldSelectors #-}
+   3  {-# LANGUAGE OverloadedRecordDot #-}
+   4  module World where
+   5  
+   6  import Data.Bool
+   7  import Graphics.Gloss
+   8  import Graphics.Gloss.Data.Color
+   9  import qualified Graphics.Gloss.Data.Picture as G
+  10  import Graphics.Gloss.Data.Point
+  11  import qualified Graphics.Gloss.Data.Point.Arithmetic as G
+  12  import Graphics.Gloss.Data.Vector
+  13  import Graphics.Gloss.Geometry.Angle
+  14  
+  15  data World
+  16      = World
+  17      { turtle :: Turtle
+  18      , pict   :: Maybe Picture 
+  19      }
+  20      deriving (Eq, Show)
+  21  
+  22  defaultWorld :: World
+  23  defaultWorld = World { turtle = defaultTurtle 
+  24                       , pict = Just defaultTurtle.selfimg
+  25                       }
+  26  data Turtle
+  27      = Turtle
+  28      { position :: Point
+  29      , direction :: Float
+  30      , pen :: Updown
+  31      , thic :: Float
+  32      , color :: Color
+  33      , showme :: Bool
+  34      , selfimg :: Picture
+  35      }
+  36      deriving (Eq, Show)
+  37  
+  38  defaultTurtle :: Turtle
+  39  defaultTurtle = Turtle
+  40                { position = (0,0)
+  41                , direction = 60
+  42                , pen = Down
+  43                , thic = 10
+  44                , color = black
+  45                , showme = True
+  46                , selfimg = lineLoop [(-10,-10),(-10,10),(10,10),(10,-10),(-10,-10),(0,10),(10,-10)]
+  47                }
+  48  
+  49  data Updown
+  50      = Up
+  51      | Down
+  52      deriving (Eq, Show)
+  53  
+  54  --
+  55  
+  56  type Instruction = World -> World
+  57  
+  58  forward, fd :: Float -> Instruction
+  59  forward d world = case world of
+  60      World { turtle = turtle } 
+  61          -> world { turtle = turtle { position = (x',y') }
+  62                   , pict = Just $ bool blank selfimg' turtle.showme <> case turtle.pen of
+  63                      Up   -> blank
+  64                      Down -> thicLine d turtle.direction turtle.thic turtle.position
+  65                   }
+  66              where
+  67                  (x',y') = newpos turtle.direction d turtle.position
+  68                  selfimg' = translate x' y' (rotate turtle.direction turtle.selfimg)
+  69  
+  70  fd = forward
+  71  
+  72  back, bk :: Float -> Instruction
+  73  back = forward . negate
+  74  
+  75  bk = back
+  76  
+  77  left, lt :: Float -> Instruction
+  78  left = right . negate
+  79  
+  80  lt = left
+  81  
+  82  right, rt :: Float -> Instruction 
+  83  right dir world = case world of
+  84      World { turtle = turtle } 
+  85          -> world { turtle = turtle { direction = newdir }
+  86                   , pict = Just $ bool blank selfimg' turtle.showme
+  87                   }
+  88              where
+  89                  newdir = turtle.direction + dir
+  90                  selfimg' = uncurry translate turtle.position (rotate newdir turtle.selfimg)
+  91  
+  92  rt = right
+  93  
+  94  setxy :: Float -> Float -> Instruction
+  95  setxy x y world =  case world of
+  96      World { turtle = turtle } 
+  97          -> world { turtle = turtle { position = (x,y) }
+  98                   , pict = Just $ bool blank selfimg' turtle.showme <> case turtle.pen of
+  99                      Up   -> blank
+ 100                      Down -> thicLine dist dir turtle.thic turtle.position
+ 101                   }
+ 102              where
+ 103                  vec = (x,y) G.- turtle.position
+ 104                  dist = magV vec
+ 105                  dir = radToDeg (angleVV (0,1) vec)
+ 106                  selfimg' = translate x y turtle.selfimg
+ 107  
+ 108  setx :: Float -> Instruction
+ 109  setx x world = case world of
+ 110      World { turtle = turtle } 
+ 111          -> setxy x y world
+ 112          where
+ 113              (_,y) = turtle.position
+ 114  
+ 115  sety :: Float -> Instruction
+ 116  sety y world = case world of
+ 117      World { turtle = turtle } 
+ 118          -> setxy x y world
+ 119          where
+ 120              (x,_) = turtle.position
+ 121  
+ 122  setheading :: Float -> Instruction
+ 123  setheading h world = case world of
+ 124      World { turtle = turtle } 
+ 125          -> right (h-d) world
+ 126          where
+ 127              d = turtle.direction
+ 128  
+ 129  home :: Instruction
+ 130  home world = case world of
+ 131      World { turtle = turtle } 
+ 132          -> setheading 0 (setxy 0 0 world )
+ 133  
+ 134  arc :: Float -> Float -> Instruction
+ 135  arc t r world = case world of
+ 136      World { turtle = turtle }
+ 137          -> world { turtle = turtle { direction = turtle.direction + t }
+ 138                   , pict = Just $ bool blank selfimg' turtle.showme
+ 139                              <> tarc 
+ 140                   }
+ 141              where
+ 142                  selfimg' = translate x y $ rotate (d+t) turtle.selfimg
+ 143                  (x,y) = turtle.position
+ 144                  d = turtle.direction
+ 145                  tarc = translate x y $ rotate d $ thickArc 0 t r turtle.thic
+ 146  
+ 147  penup :: Instruction 
+ 148  penup world = case world of
+ 149      World { turtle = turtle }
+ 150          -> world { turtle = turtle { pen = Up }
+ 151                   }
+ 152  
+ 153  pendown :: Instruction 
+ 154  pendown world = case world of
+ 155      World { turtle = turtle }
+ 156          -> world { turtle = turtle { pen = Down }
+ 157                   }
+ 158  
+ 159  clean :: Instruction
+ 160  clean world = world { pict = Nothing }
+ 161  
+ 162  clearscreen :: Instruction
+ 163  clearscreen = clean . home
+ 164  
+ 165  -- utilities
+ 166  
+ 167  newpos :: Float -> Float -> Point -> Point
+ 168  newpos dir d pos0 = pos0 G.+ diff
+ 169      where
+ 170          diff = d G.* unitVectorAtAngle a
+ 171          a = degToRad (90 - dir)
+ 172  
+ 173  spot :: Float -> Point -> Picture
+ 174  spot thc (x,y)
+ 175      = translate x y
+ 176      $ circleSolid (thc / 2)
+ 177  
+ 178  dispPict :: Picture -> IO ()
+ 179  dispPict pict = display FullScreen white pict
+ 180  
+ 181  thicLine :: Float -> Float -> Float -> Point -> Picture
+ 182  thicLine dis dir thc pos1 
+ 183      = spot thc pos1
+ 184      <> spot thc pos2
+ 185      <> translate x y (rotate dir $ rectangleSolid thc dis)
+ 186      where
+ 187          (x,y) = 0.5 G.* (pos1 G.+ pos2)
+ 188          pos2 = newpos dir dis pos1
+ 189  
+ 190  dispWorld :: World -> IO ()
+ 191  dispWorld world = maybe (dispPict blank) dispPict world.pict
+Ok, no modules loaded.
+2022-10-27 19:25:38.556301828
+>>> :l src/World.hs
+[1 of 1] Compiling World            ( src/World.hs, interpreted )
+Ok, one module loaded.
+2022-10-27 19:25:38.823300617
+>>> dispWorld (fd 100 (lt 60 (fd 200 defaultWorld)))
+<interactive>: interrupted
+<interactive>: warning: too many hs_exit()s

@@ -6,7 +6,7 @@ module World where
 import Data.Bool
 import Graphics.Gloss
 import Graphics.Gloss.Data.Color
-import Graphics.Gloss.Data.Picture
+import qualified Graphics.Gloss.Data.Picture as G
 import Graphics.Gloss.Data.Point
 import qualified Graphics.Gloss.Data.Point.Arithmetic as G
 import Graphics.Gloss.Data.Vector
@@ -15,13 +15,13 @@ import Graphics.Gloss.Geometry.Angle
 data World
     = World
     { turtle :: Turtle
-    , pict   :: Picture 
+    , pict   :: Maybe Picture 
     }
     deriving (Eq, Show)
 
 defaultWorld :: World
 defaultWorld = World { turtle = defaultTurtle 
-                     , pict = defaultTurtle.selfimg
+                     , pict = Just defaultTurtle.selfimg
                      }
 data Turtle
     = Turtle
@@ -59,7 +59,7 @@ forward, fd :: Float -> Instruction
 forward d world = case world of
     World { turtle = turtle } 
         -> world { turtle = turtle { position = (x',y') }
-                 , pict = bool blank selfimg' turtle.showme <> case turtle.pen of
+                 , pict = Just $ bool blank selfimg' turtle.showme <> case turtle.pen of
                     Up   -> blank
                     Down -> thicLine d turtle.direction turtle.thic turtle.position
                  }
@@ -83,7 +83,7 @@ right, rt :: Float -> Instruction
 right dir world = case world of
     World { turtle = turtle } 
         -> world { turtle = turtle { direction = newdir }
-                 , pict = bool blank selfimg' turtle.showme
+                 , pict = Just $ bool blank selfimg' turtle.showme
                  }
             where
                 newdir = turtle.direction + dir
@@ -95,7 +95,7 @@ setxy :: Float -> Float -> Instruction
 setxy x y world =  case world of
     World { turtle = turtle } 
         -> world { turtle = turtle { position = (x,y) }
-                 , pict = bool blank selfimg' turtle.showme <> case turtle.pen of
+                 , pict = Just $ bool blank selfimg' turtle.showme <> case turtle.pen of
                     Up   -> blank
                     Down -> thicLine dist dir turtle.thic turtle.position
                  }
@@ -118,6 +118,49 @@ sety y world = case world of
         -> setxy x y world
         where
             (x,_) = turtle.position
+
+setheading :: Float -> Instruction
+setheading h world = case world of
+    World { turtle = turtle } 
+        -> right (h-d) world
+        where
+            d = turtle.direction
+
+home :: Instruction
+home world = case world of
+    World { turtle = turtle } 
+        -> setheading 0 (setxy 0 0 world )
+
+arc :: Float -> Float -> Instruction
+arc t r world = case world of
+    World { turtle = turtle }
+        -> world { turtle = turtle { direction = turtle.direction + t }
+                 , pict = Just $ bool blank selfimg' turtle.showme
+                            <> tarc 
+                 }
+            where
+                selfimg' = translate x y $ rotate (d+t) turtle.selfimg
+                (x,y) = turtle.position
+                d = turtle.direction
+                tarc = translate x y $ rotate d $ thickArc 0 t r turtle.thic
+
+penup :: Instruction 
+penup world = case world of
+    World { turtle = turtle }
+        -> world { turtle = turtle { pen = Up }
+                 }
+
+pendown :: Instruction 
+pendown world = case world of
+    World { turtle = turtle }
+        -> world { turtle = turtle { pen = Down }
+                 }
+
+clean :: Instruction
+clean world = world { pict = Nothing }
+
+clearscreen :: Instruction
+clearscreen = clean . home
 
 -- utilities
 
@@ -145,4 +188,4 @@ thicLine dis dir thc pos1
         pos2 = newpos dir dis pos1
 
 dispWorld :: World -> IO ()
-dispWorld world = dispPict world.pict
+dispWorld world = maybe (dispPict blank) dispPict world.pict
