@@ -1,3 +1,24 @@
+dispPict (last (accumWorld (eval defaultWorld)))
+:l src/World.hs
+dispPict (last (accumWorld (eval defaultWorld)))
+:l src/World.hs
+dispPict (last (accumWorld (eval defaultWorld)))
+:l src/World.hs
+dispPict (last (accumWorld (eval defaultWorld)))
+:l src/World.hs
+dispPict (last (accumWorld (eval defaultWorld)))
+:r
+:r
+:l src/World.hs
+dispPict (last (accumWorld (eval defaultWorld)))
+dispWorld (last (accumWorld (eval defaultWorld)))
+:l src/World.hs
+dispWorld (last (eval defaultWorld))
+displayWorld (last (eval defaultWorld))
+:r
+:l src/World.hs
+:l src/World.hs
+:l src/World.hs
 dispWorld (fd 100 (lt 60 (fd 200 defaultWorld)))
 :l src/World.hs
 dispWorld (fd 200 defaultWorld)

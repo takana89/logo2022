@@ -14,11 +14,11 @@ import Graphics.Gloss.Geometry.Angle
 
 data World
     = World
-    { turtle :: Turtle
+    { instructions :: [Instruction]
+    , turtle :: Turtle
     , pict   :: Maybe Picture 
     , wrap   :: Wrap
     }
-    deriving (Eq, Show)
 
 data Wrap
     = Wrap
@@ -27,10 +27,12 @@ data Wrap
     deriving (Eq, Show)
 
 defaultWorld :: World
-defaultWorld = World { turtle = defaultTurtle 
-                     , pict = Just defaultTurtle.selfimg
+defaultWorld = World { instructions = defaultInstructions
+                     , turtle = defaultTurtle 
+                     , pict = Just (Pictures [defaultTurtle.curimg, blank])
                      , wrap = Wrap
                      }
+
 data Turtle
     = Turtle
     { position :: Point
@@ -57,7 +59,7 @@ defaultTurtle = Turtle
               } 
               where
                 original =  lineLoop [(-10,-10),(-10,10),(10,10),(10,-10),(-10,-10),(0,10),(10,-10)]
-                initdir = 60
+                initdir = 90
 
 data Updown
     = Up
@@ -227,7 +229,46 @@ dispWorld world = maybe (dispPict blank) dispPict world.pict
 --
 
 accumWorld :: [World] -> [Picture]
-accumWorld = scanl accum blank
+accumWorld = scanl accum (Pictures [blank,blank])
 
 accum :: Picture -> World -> Picture
-accum pict world = undefined
+accum pict world = case world of
+    World { turtle = turtle
+          , pict = mpict
+          , wrap = wrap
+          } -> case mpict of
+            Nothing -> blank
+            Just pic -> case pict of
+                Pictures [_, pics] -> Pictures [turtle.curimg, pics <> pic]
+                _ -> error $ show pict
+
+--
+
+eval :: World -> [World]
+eval world = world : rests
+    where 
+        rests
+            | final world = []
+            | otherwise = eval (step world)
+
+final :: World -> Bool
+final world = null world.instructions
+
+step :: World -> World
+step world = world' { instructions = tail world.instructions }
+    where
+        world' = head world.instructions world
+
+defaultInstructions :: [Instruction]
+defaultInstructions 
+    = [ fd 200
+      , lt 90
+      , fd 190
+      , lt 90
+      , fd 180
+      , lt 90
+      , fd 170
+      , lt 90
+      , fd 160
+      ]
+
