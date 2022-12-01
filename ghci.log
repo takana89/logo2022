@@ -8083,3 +8083,413 @@ Ok, one module loaded.
 >>> dispPict (last (accumWorld (eval defaultWorld)))
 <interactive>: interrupted
 <interactive>: warning: too many hs_exit()s
+Stack has not been tested with GHC versions above 9.0, and using 9.2.4, this may fail
+Stack has not been tested with Cabal versions above 3.4, but version 3.6.3.0 was found, this may fail
+GHCi, version 9.2.4: https://www.haskell.org/ghc/  :? for help
+Loaded GHCi configuration from /home/nanaka/logo2022/.ghci
+2022-12-01 18:04:35.467139018
+>>> :e src/Syntax.hs
+:l src/Syntax.hs
+   1  module Syntax 
+   2      where
+   3  
+   4  import Data.List
+   5  
+   6  data Expr
+   7      = ENum Float
+   8      | EVar String
+   9      | ERepeat Expr Expr
+  10      | EBlock [Expr]
+  11      | EWhen Expr Expr
+  12      | EIf Expr Expr Expr
+  13      | EProcCall String [Expr]
+  14      deriving (Eq, Show)
+  15  
+  16  showExpr :: Expr -> String
+  17  showExpr e = case e of
+  18      ENum x -> show x
+  19      EVar v -> v
+  20      ERepeat e1 e2 -> intersparse " " ["repeat", showExpr e1, showExpr e2]
+Ok, no modules loaded.
+2022-12-01 18:53:45.589397109
+>>> [1 of 1] Compiling Syntax           ( src/Syntax.hs, interpreted )
+
+src/Syntax.hs:20:22: error:
+    • Variable not in scope: intersparse :: t0 -> [String] -> String
+    • Perhaps you meant ‘intersperse’ (imported from Data.List)
+   |
+20 |     ERepeat e1 e2 -> intersparse " " ["repeat", showExpr e1, showExpr e2]
+   |                      ^^^^^^^^^^^
+Failed, no modules loaded.
+2022-12-01 18:53:45.950933394
+>>> :e
+   1  module Syntax 
+   2      where
+   3  
+   4  import Data.List
+   5  
+   6  data Expr
+   7      = ENum Float
+   8      | EVar String
+   9      | ERepeat Expr Expr
+  10      | EBlock [Expr]
+  11      | EWhen Expr Expr
+  12      | EIf Expr Expr Expr
+  13      | EProcCall String [Expr]
+  14      deriving (Eq, Show)
+  15  
+  16  showExpr :: Expr -> String
+  17  showExpr e = case e of
+  18      ENum x -> show x
+  19      EVar v -> v
+  20      ERepeat e1 e2 -> intersperse " " ["repeat", showExpr e1, showExpr e2]
+[1 of 1] Compiling Syntax           ( src/Syntax.hs, interpreted )
+
+src/Syntax.hs:20:49: error:
+    • Couldn't match type ‘[Char]’ with ‘Char’
+      Expected: Char
+        Actual: String
+    • In the expression: showExpr e1
+      In the second argument of ‘intersperse’, namely
+        ‘["repeat", showExpr e1, showExpr e2]’
+      In the expression:
+        intersperse " " ["repeat", showExpr e1, showExpr e2]
+   |
+20 |     ERepeat e1 e2 -> intersperse " " ["repeat", showExpr e1, showExpr e2]
+   |                                                 ^^^^^^^^^^^
+
+src/Syntax.hs:20:62: error:
+    • Couldn't match type ‘[Char]’ with ‘Char’
+      Expected: Char
+        Actual: String
+    • In the expression: showExpr e2
+      In the second argument of ‘intersperse’, namely
+        ‘["repeat", showExpr e1, showExpr e2]’
+      In the expression:
+        intersperse " " ["repeat", showExpr e1, showExpr e2]
+   |
+20 |     ERepeat e1 e2 -> intersperse " " ["repeat", showExpr e1, showExpr e2]
+   |                                                              ^^^^^^^^^^^
+Failed, no modules loaded.
+2022-12-01 18:54:18.413439875
+>>> :e
+   1  module Syntax 
+   2      where
+   3  
+   4  import Data.List
+   5  
+   6  data Expr
+   7      = ENum Float
+   8      | EVar String
+   9      | ERepeat Expr Expr
+  10      | EBlock [Expr]
+  11      | EWhen Expr Expr
+  12      | EIf Expr Expr Expr
+  13      | EProcCall String [Expr]
+  14      deriving (Eq, Show)
+  15  
+  16  showExpr :: Expr -> String
+  17  showExpr e = case e of
+  18      ENum x -> show x
+  19      EVar v -> v
+  20      ERepeat e1 e2 -> intercalate " " ["repeat", showExpr e1, showExpr e2]
+[1 of 1] Compiling Syntax           ( src/Syntax.hs, interpreted )
+Ok, one module loaded.
+2022-12-01 18:55:08.972622241
+>>> :e
+   1  module Syntax 
+   2      where
+   3  
+   4  import Data.List
+   5  
+   6  data Expr
+   7      = ENum Float
+   8      | EVar String
+   9      | ERepeat Expr Expr
+  10      | EBlock [Expr]
+  11      | EWhen Expr Expr
+  12      | EIf Expr Expr Expr
+  13      | EProcCall String [Expr]
+  14      deriving (Eq, Show)
+  15  
+  16  showExpr :: Expr -> String
+  17  showExpr e = case e of
+  18      ENum x -> show x
+  19      EVar v -> v
+  20      ERepeat e1 e2 -> intercalate " " ["repeat", showExpr e1, showExpr e2]
+  21      EBlock es -> intercalate " " (["begin"] ++ map showExpr es ++ ["end"]
+  22      EWhen e1 e2 -> intercalate " " (["when"] ++ map showExpr [e1, e2])
+  23      EIf e1 e2 e3 -> intercalate " " (["if"] ++ showExpr e1 ++ ["then"] ++ showExpr e2 ++ ["else"] ++ showExpr e3)
+  24      EProcCall proc vs -> intercalate " " ([proc] ++ map showExpr vs)
+  25  
+  26  sample1 :: Expr
+  27  sample1 = ERepeat 4 (EBlock [EProcCall "fd" (ENum 200), EProcCall "lt" (ENum 90)])
+[1 of 1] Compiling Syntax           ( src/Syntax.hs, interpreted )
+
+src/Syntax.hs:22:5: error:
+    parse error (possibly incorrect indentation or mismatched brackets)
+   |
+22 |     EWhen e1 e2 -> intercalate " " (["when"] ++ map showExpr [e1, e2])
+   |     ^
+Failed, no modules loaded.
+2022-12-01 19:09:52.630404851
+>>> :e
+   1  module Syntax 
+   2      where
+   3  
+   4  import Data.List
+   5  
+   6  data Expr
+   7      = ENum Float
+   8      | EVar String
+   9      | ERepeat Expr Expr
+  10      | EBlock [Expr]
+  11      | EWhen Expr Expr
+  12      | EIf Expr Expr Expr
+  13      | EProcCall String [Expr]
+  14      deriving (Eq, Show)
+  15  
+  16  showExpr :: Expr -> String
+  17  showExpr e = case e of
+  18      ENum x -> show x
+  19      EVar v -> v
+  20      ERepeat e1 e2 -> intercalate " " ["repeat", showExpr e1, showExpr e2]
+  21      EBlock es -> intercalate " " (["begin"] ++ map showExpr es ++ ["end"])
+  22      EWhen e1 e2 -> intercalate " " (["when"] ++ map showExpr [e1, e2])
+  23      EIf e1 e2 e3 -> intercalate " " (["if"] ++ showExpr e1 ++ ["then"] ++ showExpr e2 ++ ["else"] ++ showExpr e3)
+  24      EProcCall proc vs -> intercalate " " ([proc] ++ map showExpr vs)
+  25  
+  26  sample1 :: Expr
+  27  sample1 = ERepeat 4 (EBlock [EProcCall "fd" (ENum 200), EProcCall "lt" (ENum 90)])
+[1 of 1] Compiling Syntax           ( src/Syntax.hs, interpreted )
+
+src/Syntax.hs:23:48: error:
+    • Couldn't match type ‘Char’ with ‘[Char]’
+      Expected: [[Char]]
+        Actual: String
+    • In the first argument of ‘(++)’, namely ‘showExpr e1’
+      In the second argument of ‘(++)’, namely
+        ‘showExpr e1 ++ ["then"] ++ showExpr e2 ++ ["else"] ++ showExpr e3’
+      In the second argument of ‘intercalate’, namely
+        ‘(["if"]
+            ++
+              showExpr e1 ++ ["then"] ++ showExpr e2 ++ ["else"] ++ showExpr e3)’
+   |
+23 |     EIf e1 e2 e3 -> intercalate " " (["if"] ++ showExpr e1 ++ ["then"] ++ showExpr e2 ++ ["else"] ++ showExpr e3)
+   |                                                ^^^^^^^^^^^
+
+src/Syntax.hs:23:75: error:
+    • Couldn't match type ‘Char’ with ‘[Char]’
+      Expected: [[Char]]
+        Actual: String
+    • In the first argument of ‘(++)’, namely ‘showExpr e2’
+      In the second argument of ‘(++)’, namely
+        ‘showExpr e2 ++ ["else"] ++ showExpr e3’
+      In the second argument of ‘(++)’, namely
+        ‘["then"] ++ showExpr e2 ++ ["else"] ++ showExpr e3’
+   |
+23 |     EIf e1 e2 e3 -> intercalate " " (["if"] ++ showExpr e1 ++ ["then"] ++ showExpr e2 ++ ["else"] ++ showExpr e3)
+   |                                                                           ^^^^^^^^^^^
+
+src/Syntax.hs:23:102: error:
+    • Couldn't match type ‘Char’ with ‘[Char]’
+      Expected: [[Char]]
+        Actual: String
+    • In the second argument of ‘(++)’, namely ‘showExpr e3’
+      In the second argument of ‘(++)’, namely ‘["else"] ++ showExpr e3’
+      In the second argument of ‘(++)’, namely
+        ‘showExpr e2 ++ ["else"] ++ showExpr e3’
+   |
+23 |     EIf e1 e2 e3 -> intercalate " " (["if"] ++ showExpr e1 ++ ["then"] ++ showExpr e2 ++ ["else"] ++ showExpr e3)
+   |                                                                                                      ^^^^^^^^^^^
+
+src/Syntax.hs:27:46: error:
+    • Couldn't match expected type ‘[Expr]’ with actual type ‘Expr’
+    • In the second argument of ‘EProcCall’, namely ‘(ENum 200)’
+      In the expression: EProcCall "fd" (ENum 200)
+      In the first argument of ‘EBlock’, namely
+        ‘[EProcCall "fd" (ENum 200), EProcCall "lt" (ENum 90)]’
+   |
+27 | sample1 = ERepeat 4 (EBlock [EProcCall "fd" (ENum 200), EProcCall "lt" (ENum 90)])
+   |                                              ^^^^^^^^
+
+src/Syntax.hs:27:73: error:
+    • Couldn't match expected type ‘[Expr]’ with actual type ‘Expr’
+    • In the second argument of ‘EProcCall’, namely ‘(ENum 90)’
+      In the expression: EProcCall "lt" (ENum 90)
+      In the first argument of ‘EBlock’, namely
+        ‘[EProcCall "fd" (ENum 200), EProcCall "lt" (ENum 90)]’
+   |
+27 | sample1 = ERepeat 4 (EBlock [EProcCall "fd" (ENum 200), EProcCall "lt" (ENum 90)])
+   |                                                                         ^^^^^^^
+Failed, no modules loaded.
+2022-12-01 19:10:24.672130175
+>>> :e
+   1  module Syntax 
+   2      where
+   3  
+   4  import Data.List
+   5  
+   6  data Expr
+   7      = ENum Float
+   8      | EVar String
+   9      | ERepeat Expr Expr
+  10      | EBlock [Expr]
+  11      | EWhen Expr Expr
+  12      | EIf Expr Expr Expr
+  13      | EProcCall String [Expr]
+  14      deriving (Eq, Show)
+  15  
+  16  showExpr :: Expr -> String
+  17  showExpr e = case e of
+  18      ENum x -> show x
+  19      EVar v -> v
+  20      ERepeat e1 e2 -> intercalate " " ["repeat", showExpr e1, showExpr e2]
+  21      EBlock es -> intercalate " " (["begin"] ++ map showExpr es ++ ["end"])
+  22      EWhen e1 e2 -> intercalate " " (["when"] ++ map showExpr [e1, e2])
+  23      EIf e1 e2 e3 -> intercalate " " ["if", showExpr e1, "then", showExpr e2, "else", showExpr e3]
+  24      EProcCall proc vs -> intercalate " " ([proc] ++ map showExpr vs)
+  25  
+  26  sample1 :: Expr
+  27  sample1 = ERepeat 4 (EBlock [EProcCall "fd" (ENum 200), EProcCall "lt" (ENum 90)])
+[1 of 1] Compiling Syntax           ( src/Syntax.hs, interpreted )
+
+src/Syntax.hs:27:46: error:
+    • Couldn't match expected type ‘[Expr]’ with actual type ‘Expr’
+    • In the second argument of ‘EProcCall’, namely ‘(ENum 200)’
+      In the expression: EProcCall "fd" (ENum 200)
+      In the first argument of ‘EBlock’, namely
+        ‘[EProcCall "fd" (ENum 200), EProcCall "lt" (ENum 90)]’
+   |
+27 | sample1 = ERepeat 4 (EBlock [EProcCall "fd" (ENum 200), EProcCall "lt" (ENum 90)])
+   |                                              ^^^^^^^^
+
+src/Syntax.hs:27:73: error:
+    • Couldn't match expected type ‘[Expr]’ with actual type ‘Expr’
+    • In the second argument of ‘EProcCall’, namely ‘(ENum 90)’
+      In the expression: EProcCall "lt" (ENum 90)
+      In the first argument of ‘EBlock’, namely
+        ‘[EProcCall "fd" (ENum 200), EProcCall "lt" (ENum 90)]’
+   |
+27 | sample1 = ERepeat 4 (EBlock [EProcCall "fd" (ENum 200), EProcCall "lt" (ENum 90)])
+   |                                                                         ^^^^^^^
+Failed, no modules loaded.
+2022-12-01 19:13:52.15742694
+>>> :e
+   1  module Syntax 
+   2      where
+   3  
+   4  import Data.List
+   5  
+   6  data Expr
+   7      = ENum Float
+   8      | EVar String
+   9      | ERepeat Expr Expr
+  10      | EBlock [Expr]
+  11      | EWhen Expr Expr
+  12      | EIf Expr Expr Expr
+  13      | EProcCall String [Expr]
+  14      deriving (Eq, Show)
+  15  
+  16  showExpr :: Expr -> String
+  17  showExpr e = case e of
+  18      ENum x -> show x
+  19      EVar v -> v
+  20      ERepeat e1 e2 -> intercalate " " ["repeat", showExpr e1, showExpr e2]
+  21      EBlock es -> intercalate " " (["begin"] ++ map showExpr es ++ ["end"])
+  22      EWhen e1 e2 -> intercalate " " (["when"] ++ map showExpr [e1, e2])
+  23      EIf e1 e2 e3 -> intercalate " " ["if", showExpr e1, "then", showExpr e2, "else", showExpr e3]
+  24      EProcCall proc vs -> intercalate " " ([proc] ++ map showExpr vs)
+  25  
+  26  sample1 :: Expr
+  27  sample1 = ERepeat 4 (EBlock [EProcCall "fd" [ENum 200], EProcCall "lt" [ENum 90]])
+[1 of 1] Compiling Syntax           ( src/Syntax.hs, interpreted )
+
+src/Syntax.hs:27:19: error:
+    • No instance for (Num Expr) arising from the literal ‘4’
+    • In the first argument of ‘ERepeat’, namely ‘4’
+      In the expression:
+        ERepeat
+          4 (EBlock [EProcCall "fd" [ENum 200], EProcCall "lt" [ENum 90]])
+      In an equation for ‘sample1’:
+          sample1
+            = ERepeat
+                4 (EBlock [EProcCall "fd" [ENum 200], EProcCall "lt" [ENum 90]])
+   |
+27 | sample1 = ERepeat 4 (EBlock [EProcCall "fd" [ENum 200], EProcCall "lt" [ENum 90]])
+   |                   ^
+Failed, no modules loaded.
+2022-12-01 19:14:52.200061477
+>>> :e
+   1  module Syntax 
+   2      where
+   3  
+   4  import Data.List
+   5  
+   6  data Expr
+   7      = ENum Float
+   8      | EVar String
+   9      | ERepeat Expr Expr
+  10      | EBlock [Expr]
+  11      | EWhen Expr Expr
+  12      | EIf Expr Expr Expr
+  13      | EProcCall String [Expr]
+  14      deriving (Eq, Show)
+  15  
+  16  showExpr :: Expr -> String
+  17  showExpr e = case e of
+  18      ENum x -> show x
+  19      EVar v -> v
+  20      ERepeat e1 e2 -> intercalate " " ["repeat", showExpr e1, showExpr e2]
+  21      EBlock es -> intercalate " " (["begin"] ++ map showExpr es ++ ["end"])
+  22      EWhen e1 e2 -> intercalate " " (["when"] ++ map showExpr [e1, e2])
+  23      EIf e1 e2 e3 -> intercalate " " ["if", showExpr e1, "then", showExpr e2, "else", showExpr e3]
+  24      EProcCall proc vs -> intercalate " " ([proc] ++ map showExpr vs)
+  25  
+  26  sample1 :: Expr
+  27  sample1 = ERepeat (ENum 4) (EBlock [EProcCall "fd" [ENum 200], EProcCall "lt" [ENum 90]])
+[1 of 1] Compiling Syntax           ( src/Syntax.hs, interpreted )
+Ok, one module loaded.
+2022-12-01 19:15:40.959731346
+>>> showExpr sample1
+"repeat 4.0 begin fd 200.0 lt 90.0 end"
+2022-12-01 19:15:58.526205786
+>>> :e
+   1  module Syntax 
+   2      where
+   3  
+   4  import Data.List
+   5  
+   6  data Expr
+   7      = ENum Float
+   8      | EVar String
+   9      | ERepeat Expr Expr
+  10      | EBlock [Expr]
+  11      | EWhen Expr Expr
+  12      | EIf Expr Expr Expr
+  13      | EProcCall String [Expr]
+  14      deriving (Eq)
+  15  
+  16  instance Show Expr where
+  17      show = showExpr
+  18  
+  19  showExpr :: Expr -> String
+  20  showExpr e = case e of
+  21      ENum x -> show x
+  22      EVar v -> v
+  23      ERepeat e1 e2 -> intercalate " " ["repeat", showExpr e1, showExpr e2]
+  24      EBlock es -> intercalate " " (["begin"] ++ map showExpr es ++ ["end"])
+  25      EWhen e1 e2 -> intercalate " " (["when"] ++ map showExpr [e1, e2])
+  26      EIf e1 e2 e3 -> intercalate " " ["if", showExpr e1, "then", showExpr e2, "else", showExpr e3]
+  27      EProcCall proc vs -> intercalate " " ([proc] ++ map showExpr vs)
+  28  
+  29  sample1 :: Expr
+  30  sample1 = ERepeat (ENum 4) (EBlock [EProcCall "fd" [ENum 200], EProcCall "lt" [ENum 90]])
+[1 of 1] Compiling Syntax           ( src/Syntax.hs, interpreted )
+Ok, one module loaded.
+2022-12-01 19:18:44.967558825
+>>> sample1
+repeat 4.0 begin fd 200.0 lt 90.0 end
+2022-12-01 19:18:52.507741604
+>>> :q
+Leaving GHCi.

@@ -1,3 +1,15 @@
+:q
+sample1
+:r
+showExpr sample1
+:r
+:r
+:r
+:r
+:r
+:r
+:r
+:l src/Syntax.hs
 dispPict (last (accumWorld (eval defaultWorld)))
 :l src/World.hs
 dispPict (last (accumWorld (eval defaultWorld)))
