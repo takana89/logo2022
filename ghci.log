@@ -8493,3 +8493,342 @@ repeat 4.0 begin fd 200.0 lt 90.0 end
 2022-12-01 19:18:52.507741604
 >>> :q
 Leaving GHCi.
+Stack has not been tested with GHC versions above 9.0, and using 9.2.4, this may fail
+Stack has not been tested with Cabal versions above 3.4, but version 3.6.3.0 was found, this may fail
+GHCi, version 9.2.4: https://www.haskell.org/ghc/  :? for help
+Loaded GHCi configuration from /home/nanaka/logo2022/.ghci
+2022-12-08 19:16:37.034599818
+>>> :e src/Syntax.hs
+   1  module Syntax 
+   2      where
+   3  
+   4  import Data.Char
+   5  import Data.List
+   6  import Text.ParserCombinators.ReadP
+   7  
+   8  data Expr
+   9      = ENum Float
+  10      | EVar String
+  11      | ERepeat Expr Expr
+  12      | EBlock [Expr]
+  13      | EWhen Expr Expr
+  14      | EIf Expr Expr Expr
+  15      | EProcCall String [Expr]
+  16      | EArith Bop Expr Expr
+  17      | EProcDef String [String]
+  18      deriving (Eq)
+  19  
+  20  isAtom :: Expr -> Bool
+  21  isAtom (ENum _) = True
+  22  isAtom (EVar _) = True
+  23  isAtom _ = False
+  24  
+  25  instance Show Expr where
+  26      show = showExpr
+  27  
+  28  showExpr :: Expr -> String
+  29  showExpr e = case e of
+  30      ENum x -> show x
+  31      EVar v -> v
+  32      ERepeat e1 e2 -> intercalate " " ["repeat", showExpr e1, showExpr e2]
+  33      EBlock es -> intercalate " " (["begin"] ++ map showExpr es ++ ["end"])
+  34      EWhen e1 e2 -> intercalate " " (["when"] ++ map showExpr [e1, e2])
+  35      EIf e1 e2 e3 -> intercalate " " ["if", showExpr e1, "then", showExpr e2, "else", showExpr e3]
+  36      EProcCall proc vs -> intercalate " " ([proc] ++ map showExpr vs)
+  37      EArith op e1 e2 -> unwords [show' e1, show op, show' e1]
+  38          where
+  39              show' e | isAtom e = show e
+  40                      | otherwise = "(" ++ show e ++ ")"
+  41      EProcDef proc vs -> unwords (proc : vs)
+  42  
+  43  sample1 :: Expr
+  44  sample1 = ERepeat (ENum 4) (EBlock [EProcCall "fd" [ENum 200], EProcCall "lt" [ENum 90]])
+  45  
+  46  data Bop
+  47      = Add | Sub | Mul | Div deriving (Eq)
+  48  
+  49  instance Show Bop where
+  50      show Add = "+" 
+  51      show Sub = "-"
+  52      show Mul = "*"
+  53      show Div = "/"
+  54  --
+  55  
+  56  instance Read Expr where
+  57      readsPrec _ = readP_to_S userInputR
+  58  
+  59  userInputR :: ReadP Expr
+  60  userInputR = exprR +++ procdefR
+  61  
+  62  procdefR :: ReadP Expr
+  63  procdefR = EProcDef <$> (string "proc" *> idenR) <*> many1 idenR
+  64  
+  65  idenR :: ReadP String
+  66  idenR = munch1 isLetter
+  67  
+  68  exprR :: ReadP Expr
+  69  exprR = undefined
+Ok, no modules loaded.
+2022-12-08 19:16:57.400362435
+>>> :l src/Syntax.hs
+[1 of 1] Compiling Syntax           ( src/Syntax.hs, interpreted )
+Ok, one module loaded.
+2022-12-08 19:16:57.539433719
+>>> read "proc hoge x y z" :: Expr
+*** Exception: Prelude.undefined
+CallStack (from HasCallStack):
+  error, called at libraries/base/GHC/Err.hs:74:14 in base:GHC.Err
+  undefined, called at src/Syntax.hs:69:9 in main:Syntax
+2022-12-08 19:18:05.173812985
+>>> :e
+   1  module Syntax 
+   2      where
+   3  
+   4  import Data.Char
+   5  import Data.List
+   6  import Text.ParserCombinators.ReadP
+   7  
+   8  data Expr
+   9      = ENum Float
+  10      | EVar String
+  11      | ERepeat Expr Expr
+  12      | EBlock [Expr]
+  13      | EWhen Expr Expr
+  14      | EIf Expr Expr Expr
+  15      | EProcCall String [Expr]
+  16      | EArith Bop Expr Expr
+  17      | EProcDef String [String]
+  18      deriving (Eq)
+  19  
+  20  isAtom :: Expr -> Bool
+  21  isAtom (ENum _) = True
+  22  isAtom (EVar _) = True
+  23  isAtom _ = False
+  24  
+  25  instance Show Expr where
+  26      show = showExpr
+  27  
+  28  showExpr :: Expr -> String
+  29  showExpr e = case e of
+  30      ENum x -> show x
+  31      EVar v -> v
+  32      ERepeat e1 e2 -> intercalate " " ["repeat", showExpr e1, showExpr e2]
+  33      EBlock es -> intercalate " " (["begin"] ++ map showExpr es ++ ["end"])
+  34      EWhen e1 e2 -> intercalate " " (["when"] ++ map showExpr [e1, e2])
+  35      EIf e1 e2 e3 -> intercalate " " ["if", showExpr e1, "then", showExpr e2, "else", showExpr e3]
+  36      EProcCall proc vs -> intercalate " " ([proc] ++ map showExpr vs)
+  37      EArith op e1 e2 -> unwords [show' e1, show op, show' e1]
+  38          where
+  39              show' e | isAtom e = show e
+  40                      | otherwise = "(" ++ show e ++ ")"
+  41      EProcDef proc vs -> unwords (proc : vs)
+  42  
+  43  sample1 :: Expr
+  44  sample1 = ERepeat (ENum 4) (EBlock [EProcCall "fd" [ENum 200], EProcCall "lt" [ENum 90]])
+  45  
+  46  data Bop
+  47      = Add | Sub | Mul | Div deriving (Eq)
+  48  
+  49  instance Show Bop where
+  50      show Add = "+" 
+  51      show Sub = "-"
+  52      show Mul = "*"
+  53      show Div = "/"
+  54  --
+  55  
+  56  instance Read Expr where
+  57      readsPrec _ = readP_to_S userInputR
+  58  
+  59  userInputR :: ReadP Expr
+  60  userInputR = {- exprR +++ -} procdefR
+  61  
+  62  procdefR :: ReadP Expr
+  63  procdefR = EProcDef <$> (string "proc" *> idenR) <*> many1 idenR
+  64  
+  65  idenR :: ReadP String
+  66  idenR = munch1 isLetter
+  67  
+  68  exprR :: ReadP Expr
+  69  exprR = undefined
+[1 of 1] Compiling Syntax           ( src/Syntax.hs, interpreted )
+Ok, one module loaded.
+2022-12-08 19:19:03.474845028
+>>> read "proc hoge x y z" :: Expr
+*** Exception: Prelude.read: no parse
+2022-12-08 19:19:07.262737669
+>>> hogeR = readP_to_S idenR 
+2022-12-08 19:21:08.227993185
+>>> hogeR 0 "hoge"
+
+<interactive>:7:1: error:
+    • Couldn't match expected type: t0 -> t
+                  with actual type: [(String, String)]
+    • The function ‘hogeR’ is applied to two value arguments,
+        but its type ‘String -> [(String, String)]’ has only one
+      In the expression: hogeR 0 "hoge"
+      In an equation for ‘it’: it = hogeR 0 "hoge"
+    • Relevant bindings include it :: t (bound at <interactive>:7:1)
+2022-12-08 19:22:10.764011687
+>>> hogeR "hoge"
+[("hoge","")]
+2022-12-08 19:23:13.531774273
+>>> :e
+   1  module Syntax 
+   2      where
+   3  
+   4  import Data.Char
+   5  import Data.List
+   6  import Text.ParserCombinators.ReadP
+   7  
+   8  data Expr
+   9      = ENum Float
+  10      | EVar String
+  11      | ERepeat Expr Expr
+  12      | EBlock [Expr]
+  13      | EWhen Expr Expr
+  14      | EIf Expr Expr Expr
+  15      | EProcCall String [Expr]
+  16      | EArith Bop Expr Expr
+  17      | EProcDef String [String]
+  18      deriving (Eq)
+  19  
+  20  isAtom :: Expr -> Bool
+  21  isAtom (ENum _) = True
+  22  isAtom (EVar _) = True
+  23  isAtom _ = False
+  24  
+  25  instance Show Expr where
+  26      show = showExpr
+  27  
+  28  showExpr :: Expr -> String
+  29  showExpr e = case e of
+  30      ENum x -> show x
+  31      EVar v -> v
+  32      ERepeat e1 e2 -> intercalate " " ["repeat", showExpr e1, showExpr e2]
+  33      EBlock es -> intercalate " " (["begin"] ++ map showExpr es ++ ["end"])
+  34      EWhen e1 e2 -> intercalate " " (["when"] ++ map showExpr [e1, e2])
+  35      EIf e1 e2 e3 -> intercalate " " ["if", showExpr e1, "then", showExpr e2, "else", showExpr e3]
+  36      EProcCall proc vs -> intercalate " " ([proc] ++ map showExpr vs)
+  37      EArith op e1 e2 -> unwords [show' e1, show op, show' e1]
+  38          where
+  39              show' e | isAtom e = show e
+  40                      | otherwise = "(" ++ show e ++ ")"
+  41      EProcDef proc vs -> unwords (proc : vs)
+  42  
+  43  sample1 :: Expr
+  44  sample1 = ERepeat (ENum 4) (EBlock [EProcCall "fd" [ENum 200], EProcCall "lt" [ENum 90]])
+  45  
+  46  data Bop
+  47      = Add | Sub | Mul | Div deriving (Eq)
+  48  
+  49  instance Show Bop where
+  50      show Add = "+" 
+  51      show Sub = "-"
+  52      show Mul = "*"
+  53      show Div = "/"
+  54  --
+  55  
+  56  instance Read Expr where
+  57      readsPrec _ = readP_to_S userInputR
+  58  
+  59  userInputR :: ReadP Expr
+  60  userInputR = {- exprR +++ -} procdefR
+  61  
+  62  procdefR :: ReadP Expr
+  63  procdefR = EProcDef <$> (string "proc" *> idenR) <*> many1 idenR
+  64  
+  65  idenR :: ReadP String
+  66  idenR = skipSpaces *> munch1 isLetter
+  67  
+  68  exprR :: ReadP Expr
+  69  exprR = undefined
+[1 of 1] Compiling Syntax           ( src/Syntax.hs, interpreted )
+Ok, one module loaded.
+2022-12-08 19:24:34.233926354
+>>> read "proc hoge x y z" :: Expr
+hoge x y z
+2022-12-08 19:24:43.349150296
+>>> read "prec hoge x y z" :: Expr
+*** Exception: Prelude.read: no parse
+2022-12-08 19:25:16.970487973
+>>> :e
+   1  module Syntax 
+   2      where
+   3  
+   4  import Data.Char
+   5  import Data.List
+   6  import Text.ParserCombinators.ReadP
+   7  
+   8  data Expr
+   9      = ENum Float
+  10      | EVar String
+  11      | ERepeat Expr Expr
+  12      | EBlock [Expr]
+  13      | EWhen Expr Expr
+  14      | EIf Expr Expr Expr
+  15      | EProcCall String [Expr]
+  16      | EArith Bop Expr Expr
+  17      | EProcDef String [String]
+  18      deriving (Eq, Show)
+  19  
+  20  isAtom :: Expr -> Bool
+  21  isAtom (ENum _) = True
+  22  isAtom (EVar _) = True
+  23  isAtom _ = False
+  24  
+  25  -- instance Show Expr where
+  26  --     show = showExpr
+  27  
+  28  showExpr :: Expr -> String
+  29  showExpr e = case e of
+  30      ENum x -> show x
+  31      EVar v -> v
+  32      ERepeat e1 e2 -> intercalate " " ["repeat", showExpr e1, showExpr e2]
+  33      EBlock es -> intercalate " " (["begin"] ++ map showExpr es ++ ["end"])
+  34      EWhen e1 e2 -> intercalate " " (["when"] ++ map showExpr [e1, e2])
+  35      EIf e1 e2 e3 -> intercalate " " ["if", showExpr e1, "then", showExpr e2, "else", showExpr e3]
+  36      EProcCall proc vs -> intercalate " " ([proc] ++ map showExpr vs)
+  37      EArith op e1 e2 -> unwords [show' e1, show op, show' e1]
+  38          where
+  39              show' e | isAtom e = show e
+  40                      | otherwise = "(" ++ show e ++ ")"
+  41      EProcDef proc vs -> unwords (proc : vs)
+  42  
+  43  sample1 :: Expr
+  44  sample1 = ERepeat (ENum 4) (EBlock [EProcCall "fd" [ENum 200], EProcCall "lt" [ENum 90]])
+  45  
+  46  data Bop
+  47      = Add | Sub | Mul | Div deriving (Eq)
+  48  
+  49  instance Show Bop where
+  50      show Add = "+" 
+  51      show Sub = "-"
+  52      show Mul = "*"
+  53      show Div = "/"
+  54  --
+  55  
+  56  instance Read Expr where
+  57      readsPrec _ = readP_to_S userInputR
+  58  
+  59  userInputR :: ReadP Expr
+  60  userInputR = {- exprR +++ -} procdefR
+  61  
+  62  procdefR :: ReadP Expr
+  63  procdefR = EProcDef <$> (string "proc" *> idenR) <*> many1 idenR
+  64  
+  65  idenR :: ReadP String
+  66  idenR = skipSpaces *> munch1 isLetter
+  67  
+  68  exprR :: ReadP Expr
+  69  exprR = undefined
+[1 of 1] Compiling Syntax           ( src/Syntax.hs, interpreted )
+Ok, one module loaded.
+2022-12-08 19:28:09.589693523
+>>> read "prec hoge x y z" :: Expr
+*** Exception: Prelude.read: no parse
+2022-12-08 19:28:20.559555857
+>>> read "proc hoge x y z" :: Expr
+EProcDef "hoge" ["x","y","z"]
+2022-12-08 19:28:29.931751015
+>>> :q
+Leaving GHCi.

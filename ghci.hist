@@ -1,4 +1,18 @@
 :q
+read "proc hoge x y z" :: Expr
+read "prec hoge x y z" :: Expr
+:r
+read "prec hoge x y z" :: Expr
+read "proc hoge x y z" :: Expr
+:r
+hogeR "hoge"
+hogeR 0 "hoge"
+hogeR = readP_to_S idenR 
+read "proc hoge x y z" :: Expr
+:r
+read "proc hoge x y z" :: Expr
+:l src/Syntax.hs
+:q
 sample1
 :r
 showExpr sample1
