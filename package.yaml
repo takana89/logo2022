@@ -26,6 +26,7 @@ dependencies:
 - utf8-string
 - hspec
 - gloss
+- parsec
 
 library:
   source-dirs: src

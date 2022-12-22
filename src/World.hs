@@ -14,7 +14,8 @@ import Graphics.Gloss.Geometry.Angle
 
 data World
     = World
-    { instructions :: [Instruction]
+    { control :: [String]
+    , instructions :: [Instruction]
     , turtle :: Turtle
     , pict   :: Maybe Picture 
     , wrap   :: Wrap
@@ -27,7 +28,8 @@ data Wrap
     deriving (Eq, Show)
 
 defaultWorld :: World
-defaultWorld = World { instructions = defaultInstructions
+defaultWorld = World { control = []
+                     , instructions = defaultInstructions
                      , turtle = defaultTurtle 
                      , pict = Just (Pictures [defaultTurtle.curimg, blank])
                      , wrap = Wrap
@@ -255,9 +257,18 @@ final :: World -> Bool
 final world = null world.instructions
 
 step :: World -> World
-step world = world' { instructions = tail world.instructions }
+step world = case world.control of 
+    _:cs -> world' { control = cs 
+                   , instructions = tail world.instructions
+                   }
     where
         world' = head world.instructions world
+
+run :: [String] -> [Picture]
+run cs 
+    = accumWorld 
+    $ eval
+    $ defaultWorld { control = cs }
 
 defaultInstructions :: [Instruction]
 defaultInstructions 
