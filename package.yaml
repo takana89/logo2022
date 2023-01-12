@@ -25,6 +25,7 @@ dependencies:
 - bytestring
 - utf8-string
 - hspec
+- doctest
 - gloss
 - parsec
 

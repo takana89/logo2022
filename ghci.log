@@ -8832,3 +8832,1484 @@ EProcDef "hoge" ["x","y","z"]
 2022-12-08 19:28:29.931751015
 >>> :q
 Leaving GHCi.
+Stack has not been tested with GHC versions above 9.0, and using 9.2.4, this may fail
+Stack has not been tested with Cabal versions above 3.4, but version 3.6.3.0 was found, this may fail
+GHCi, version 9.2.4: https://www.haskell.org/ghc/  :? for help
+Loaded GHCi configuration from /home/nanaka/logo2022/.ghci
+2022-12-22 18:49:30.440649953
+>>> :e src/Syntax.hs
+   1  module Syntax 
+   2      where
+   3  
+   4  import Data.Char
+   5  import Data.List
+   6  import Text.ParserCombinators.ReadP
+   7  
+   8  data Expr
+   9      = ENum Float
+  10      | EVar String
+  11      | ERepeat Expr Expr
+  12      | EBlock [Expr]
+  13      | EWhen Expr Expr
+  14      | EIf Expr Expr Expr
+  15      | EProcCall String [Expr]
+  16      | EArith Bop Expr Expr
+  17      | EProcDef String [String]
+  18      deriving (Eq, Show)
+  19  
+  20  isAtom :: Expr -> Bool
+  21  isAtom (ENum _) = True
+  22  isAtom (EVar _) = True
+  23  isAtom _ = False
+  24  
+  25  -- instance Show Expr where
+  26  --     show = showExpr
+  27  
+  28  showExpr :: Expr -> String
+  29  showExpr e = case e of
+  30      ENum x -> show x
+  31      EVar v -> v
+  32      ERepeat e1 e2 -> intercalate " " ["repeat", showExpr e1, showExpr e2]
+  33      EBlock es -> intercalate " " (["begin"] ++ map showExpr es ++ ["end"])
+  34      EWhen e1 e2 -> intercalate " " (["when"] ++ map showExpr [e1, e2])
+  35      EIf e1 e2 e3 -> intercalate " " ["if", showExpr e1, "then", showExpr e2, "else", showExpr e3]
+  36      EProcCall proc vs -> intercalate " " ([proc] ++ map showExpr vs)
+  37      EArith op e1 e2 -> unwords [show' e1, show op, show' e1]
+  38          where
+  39              show' e | isAtom e = show e
+  40                      | otherwise = "(" ++ show e ++ ")"
+  41      EProcDef proc vs -> unwords (proc : vs)
+  42  
+  43  sample1 :: Expr
+  44  sample1 = ERepeat (ENum 4) (EBlock [EProcCall "fd" [ENum 200], EProcCall "lt" [ENum 90]])
+  45  
+  46  data Bop
+  47      = Add | Sub | Mul | Div deriving (Eq)
+  48  
+  49  instance Show Bop where
+  50      show Add = "+" 
+  51      show Sub = "-"
+  52      show Mul = "*"
+  53      show Div = "/"
+  54  --
+  55  
+  56  instance Read Expr where
+  57      readsPrec _ = readP_to_S userInputR
+  58  
+  59  userInputR :: ReadP Expr
+  60  userInputR =  exprR +++ procdefR
+  61  
+  62  procdefR :: ReadP Expr
+  63  procdefR = EProcDef <$> (string "proc" *> idenR) <*> many1 idenR
+  64  
+  65  idenR :: ReadP String
+  66  idenR = skipSpaces *> munch1 isLetter
+  67  
+  68  exprR :: ReadP Expr
+  69  exprR = callprocR
+  70  
+  71  callprocR :: ReadP Expr
+  72  callprocR = EProcCall <$> idenR <*> many exprR
+Ok, no modules loaded.
+2022-12-22 18:49:49.853266088
+>>> :l src/Syntax.hs
+[1 of 1] Compiling Syntax           ( src/Syntax.hs, interpreted )
+Ok, one module loaded.
+2022-12-22 18:49:50.008675636
+>>> read "fd 200" :: Expr
+*** Exception: Prelude.read: no parse
+2022-12-22 18:50:37.90178227
+>>> :e
+   1  module Syntax 
+   2      where
+   3  
+   4  import Data.Char
+   5  import Data.List
+   6  import Text.ParserCombinators.ReadP
+   7  
+   8  data Expr
+   9      = ENum Float
+  10      | EVar String
+  11      | ERepeat Expr Expr
+  12      | EBlock [Expr]
+  13      | EWhen Expr Expr
+  14      | EIf Expr Expr Expr
+  15      | EProcCall String [Expr]
+  16      | EArith Expr Bop Expr
+  17      | ECompare Expr Rop Expr
+  18      | EProcDef String [String]
+  19      deriving (Eq, Show)
+  20  
+  21  isAtom :: Expr -> Bool
+  22  isAtom (ENum _) = True
+  23  isAtom (EVar _) = True
+  24  isAtom _ = False
+  25  
+  26  -- instance Show Expr where
+  27  --     show = showExpr
+  28  
+  29  showExpr :: Expr -> String
+  30  showExpr e = case e of
+  31      ENum x -> show x
+  32      EVar v -> v
+  33      ERepeat e1 e2 -> intercalate " " ["repeat", showExpr e1, showExpr e2]
+  34      EBlock es -> intercalate " " (["begin"] ++ map showExpr es ++ ["end"])
+  35      EWhen e1 e2 -> intercalate " " (["when"] ++ map showExpr [e1, e2])
+  36      EIf e1 e2 e3 -> intercalate " " ["if", showExpr e1, "then", showExpr e2, "else", showExpr e3]
+  37      EProcCall proc vs -> intercalate " " ([proc] ++ map showExpr vs)
+  38      EArith op e1 e2 -> unwords [show' e1, show op, show' e1]
+  39          where
+  40              show' e | isAtom e = show e
+  41                      | otherwise = "(" ++ show e ++ ")"
+  42      EProcDef proc vs -> unwords (proc : vs)
+  43  
+  44  sample1 :: Expr
+  45  sample1 = ERepeat (ENum 4) (EBlock [EProcCall "fd" [ENum 200], EProcCall "lt" [ENum 90]])
+  46  
+  47  data Bop
+  48      = Add | Sub | Mul | Div deriving (Eq)
+  49  
+  50  instance Show Bop where
+  51      show Add = "+" 
+  52      show Sub = "-"
+  53      show Mul = "*"
+  54      show Div = "/"
+  55  
+  56  data Rop
+  57      = Lt | Gt deriving (Eq)
+  58  
+  59  instance Show Rop where
+  60      show Lt = "<"
+  61      show Gt = ">"
+  62  
+  63  bopR :: ReadP Bop
+  64  bopR = skipSpaces *> Lt <$ string "<"
+  65      +++ skipSpaces *> Gt <$ string ">"
+  66  
+  67  --
+  68  
+  69  instance Read Expr where
+  70      readsPrec _ = readP_to_S userInputR
+  71  
+  72  userInputR :: ReadP Expr
+  73  userInputR =  exprR +++ procdefR
+  74  
+  75  procdefR :: ReadP Expr
+  76  procdefR = EProcDef <$> (string "proc" *> idenR) <*> many1 idenR
+  77  
+  78  idenR :: ReadP String
+  79  idenR = skipSpaces *> munch1 isLetter
+  80  
+  81  exprR :: ReadP Expr
+  82  exprR = ECompare <$> arithexpr  
+  83  
+  84  callprocR :: ReadP Expr
+  85  callprocR = EProcCall <$> idenR <*> many exprR
+[1 of 1] Compiling Syntax           ( src/Syntax.hs, interpreted )
+
+src/Syntax.hs:82:22: error:
+    Variable not in scope: arithexpr :: ReadP Expr
+   |
+82 | exprR = ECompare <$> arithexpr  
+   |                      ^^^^^^^^^
+Failed, no modules loaded.
+2022-12-22 19:10:16.240953387
+>>> :e
+   1  module Syntax 
+   2      where
+   3  
+   4  import Data.Char
+   5  import Data.List
+   6  import Text.ParserCombinators.ReadP
+   7  
+   8  data Expr
+   9      = ENum Float
+  10      | EVar String
+  11      | ERepeat Expr Expr
+  12      | EBlock [Expr]
+  13      | EWhen Expr Expr
+  14      | EIf Expr Expr Expr
+  15      | EProcCall String [Expr]
+  16      | EArith Expr Bop Expr
+  17      | ECompare Expr Rop Expr
+  18      | EProcDef String [String]
+  19      deriving (Eq, Show)
+  20  
+  21  isAtom :: Expr -> Bool
+  22  isAtom (ENum _) = True
+  23  isAtom (EVar _) = True
+  24  isAtom _ = False
+  25  
+  26  -- instance Show Expr where
+  27  --     show = showExpr
+  28  
+  29  showExpr :: Expr -> String
+  30  showExpr e = case e of
+  31      ENum x -> show x
+  32      EVar v -> v
+  33      ERepeat e1 e2 -> intercalate " " ["repeat", showExpr e1, showExpr e2]
+  34      EBlock es -> intercalate " " (["begin"] ++ map showExpr es ++ ["end"])
+  35      EWhen e1 e2 -> intercalate " " (["when"] ++ map showExpr [e1, e2])
+  36      EIf e1 e2 e3 -> intercalate " " ["if", showExpr e1, "then", showExpr e2, "else", showExpr e3]
+  37      EProcCall proc vs -> intercalate " " ([proc] ++ map showExpr vs)
+  38      EArith op e1 e2 -> unwords [show' e1, show op, show' e1]
+  39          where
+  40              show' e | isAtom e = show e
+  41                      | otherwise = "(" ++ show e ++ ")"
+  42      EProcDef proc vs -> unwords (proc : vs)
+  43  
+  44  sample1 :: Expr
+  45  sample1 = ERepeat (ENum 4) (EBlock [EProcCall "fd" [ENum 200], EProcCall "lt" [ENum 90]])
+  46  
+  47  data Bop
+  48      = Add | Sub | Mul | Div deriving (Eq)
+  49  
+  50  instance Show Bop where
+  51      show Add = "+" 
+  52      show Sub = "-"
+  53      show Mul = "*"
+  54      show Div = "/"
+  55  
+  56  plusR :: ReadP Bop
+  57  plusR = skipSpaces *> (Add <$ string "+")
+  58      +++ skipSpaces *> (Sub <$ string "-")
+  59  
+  60  multR :: ReadP Bop
+  61  multR = skipSpaces *> (Mul <$ string "*")
+  62      +++ skipSpaces *> (Div <$ string "/")
+  63  
+  64  data Rop
+  65      = Lt | Gt deriving (Eq)
+  66  
+  67  instance Show Rop where
+  68      show Lt = "<"
+  69      show Gt = ">"
+  70  
+  71  ropR :: ReadP Rop
+  72  ropR = skipSpaces *> (Lt <$ string "<")
+  73      +++ skipSpaces *> (Gt <$ string ">")
+  74  
+  75  --
+  76  
+  77  instance Read Expr where
+  78      readsPrec _ = readP_to_S userInputR
+  79  
+  80  userInputR :: ReadP Expr
+  81  userInputR =  exprR +++ procdefR
+  82  
+  83  procdefR :: ReadP Expr
+  84  procdefR = EProcDef <$> (string "proc" *> idenR) <*> many1 idenR
+  85  
+  86  idenR :: ReadP String
+  87  idenR = skipSpaces *> munch1 isLetter
+  88  
+  89  exprR :: ReadP Expr
+  90  exprR = ECompare <$> arithexprR <*> bopR <*> arithexprR
+  91  
+  92  arithexprR :: ReadP Expr
+  93  arithexprR = EArith <$> multiveR <*> plusR <*> multiveR
+  94  
+  95  callprocR :: ReadP Expr
+  96  callprocR = EProcCall <$> idenR <*> many exprR
+[1 of 1] Compiling Syntax           ( src/Syntax.hs, interpreted )
+
+src/Syntax.hs:90:37: error:
+    • Variable not in scope: bopR :: ReadP Rop
+    • Perhaps you meant ‘ropR’ (line 72)
+   |
+90 | exprR = ECompare <$> arithexprR <*> bopR <*> arithexprR
+   |                                     ^^^^
+
+src/Syntax.hs:93:25: error:
+    Variable not in scope: multiveR :: ReadP Expr
+   |
+93 | arithexprR = EArith <$> multiveR <*> plusR <*> multiveR
+   |                         ^^^^^^^^
+
+src/Syntax.hs:93:48: error:
+    Variable not in scope: multiveR :: ReadP Expr
+   |
+93 | arithexprR = EArith <$> multiveR <*> plusR <*> multiveR
+   |                                                ^^^^^^^^
+Failed, no modules loaded.
+2022-12-22 19:22:51.043260099
+>>> :e
+   1  module Syntax 
+   2      where
+   3  
+   4  import Data.Char
+   5  import Data.List
+   6  import Text.ParserCombinators.ReadP
+   7  
+   8  data Expr
+   9      = ENum Float
+  10      | EVar String
+  11      | ERepeat Expr Expr
+  12      | EBlock [Expr]
+  13      | EWhen Expr Expr
+  14      | EIf Expr Expr Expr
+  15      | EProcCall String [Expr]
+  16      | EArith Expr Bop Expr
+  17      | ECompare Expr Rop Expr
+  18      | EProcDef String [String]
+  19      deriving (Eq, Show)
+  20  
+  21  isAtom :: Expr -> Bool
+  22  isAtom (ENum _) = True
+  23  isAtom (EVar _) = True
+  24  isAtom _ = False
+  25  
+  26  -- instance Show Expr where
+  27  --     show = showExpr
+  28  
+  29  showExpr :: Expr -> String
+  30  showExpr e = case e of
+  31      ENum x -> show x
+  32      EVar v -> v
+  33      ERepeat e1 e2 -> intercalate " " ["repeat", showExpr e1, showExpr e2]
+  34      EBlock es -> intercalate " " (["begin"] ++ map showExpr es ++ ["end"])
+  35      EWhen e1 e2 -> intercalate " " (["when"] ++ map showExpr [e1, e2])
+  36      EIf e1 e2 e3 -> intercalate " " ["if", showExpr e1, "then", showExpr e2, "else", showExpr e3]
+  37      EProcCall proc vs -> intercalate " " ([proc] ++ map showExpr vs)
+  38      EArith op e1 e2 -> unwords [show' e1, show op, show' e1]
+  39          where
+  40              show' e | isAtom e = show e
+  41                      | otherwise = "(" ++ show e ++ ")"
+  42      EProcDef proc vs -> unwords (proc : vs)
+  43  
+  44  sample1 :: Expr
+  45  sample1 = ERepeat (ENum 4) (EBlock [EProcCall "fd" [ENum 200], EProcCall "lt" [ENum 90]])
+  46  
+  47  data Bop
+  48      = Add | Sub | Mul | Div deriving (Eq)
+  49  
+  50  instance Show Bop where
+  51      show Add = "+" 
+  52      show Sub = "-"
+  53      show Mul = "*"
+  54      show Div = "/"
+  55  
+  56  plusR :: ReadP Bop
+  57  plusR = skipSpaces *> (Add <$ string "+")
+  58      +++ skipSpaces *> (Sub <$ string "-")
+  59  
+  60  multR :: ReadP Bop
+  61  multR = skipSpaces *> (Mul <$ string "*")
+  62      +++ skipSpaces *> (Div <$ string "/")
+  63  
+  64  data Rop
+  65      = Lt | Gt deriving (Eq)
+  66  
+  67  instance Show Rop where
+  68      show Lt = "<"
+  69      show Gt = ">"
+  70  
+  71  ropR :: ReadP Rop
+  72  ropR = skipSpaces *> (Lt <$ string "<")
+  73      +++ skipSpaces *> (Gt <$ string ">")
+  74  
+  75  --
+  76  
+  77  instance Read Expr where
+  78      readsPrec _ = readP_to_S userInputR
+  79  
+  80  userInputR :: ReadP Expr
+  81  userInputR =  exprR +++ procdefR
+  82  
+  83  procdefR :: ReadP Expr
+  84  procdefR = EProcDef <$> (string "proc" *> idenR) <*> many1 idenR
+  85  
+  86  idenR :: ReadP String
+  87  idenR = skipSpaces *> munch1 isLetter
+  88  
+  89  exprR :: ReadP Expr
+  90  exprR = ECompare <$> arithexprR <*> bopR <*> arithexprR
+  91  
+  92  arithexprR :: ReadP Expr
+  93  arithexprR = EArith <$> multiveR <*> plusR <*> multiveR
+  94  
+  95  multiveR :: ReadP Expr
+  96  multiveR = undefined
+  97  
+  98  callprocR :: ReadP Expr
+  99  callprocR = EProcCall <$> idenR <*> many exprR
+[1 of 1] Compiling Syntax           ( src/Syntax.hs, interpreted )
+
+src/Syntax.hs:90:37: error:
+    • Variable not in scope: bopR :: ReadP Rop
+    • Perhaps you meant ‘ropR’ (line 72)
+   |
+90 | exprR = ECompare <$> arithexprR <*> bopR <*> arithexprR
+   |                                     ^^^^
+Failed, no modules loaded.
+2022-12-22 19:23:48.190600424
+>>> :e
+   1  module Syntax 
+   2      where
+   3  
+   4  import Data.Char
+   5  import Data.List
+   6  import Text.ParserCombinators.ReadP
+   7  
+   8  data Expr
+   9      = ENum Float
+  10      | EVar String
+  11      | ERepeat Expr Expr
+  12      | EBlock [Expr]
+  13      | EWhen Expr Expr
+  14      | EIf Expr Expr Expr
+  15      | EProcCall String [Expr]
+  16      | EArith Expr Bop Expr
+  17      | ECompare Expr Rop Expr
+  18      | EProcDef String [String]
+  19      deriving (Eq, Show)
+  20  
+  21  isAtom :: Expr -> Bool
+  22  isAtom (ENum _) = True
+  23  isAtom (EVar _) = True
+  24  isAtom _ = False
+  25  
+  26  -- instance Show Expr where
+  27  --     show = showExpr
+  28  
+  29  showExpr :: Expr -> String
+  30  showExpr e = case e of
+  31      ENum x -> show x
+  32      EVar v -> v
+  33      ERepeat e1 e2 -> intercalate " " ["repeat", showExpr e1, showExpr e2]
+  34      EBlock es -> intercalate " " (["begin"] ++ map showExpr es ++ ["end"])
+  35      EWhen e1 e2 -> intercalate " " (["when"] ++ map showExpr [e1, e2])
+  36      EIf e1 e2 e3 -> intercalate " " ["if", showExpr e1, "then", showExpr e2, "else", showExpr e3]
+  37      EProcCall proc vs -> intercalate " " ([proc] ++ map showExpr vs)
+  38      EArith op e1 e2 -> unwords [show' e1, show op, show' e1]
+  39          where
+  40              show' e | isAtom e = show e
+  41                      | otherwise = "(" ++ show e ++ ")"
+  42      EProcDef proc vs -> unwords (proc : vs)
+  43  
+  44  sample1 :: Expr
+  45  sample1 = ERepeat (ENum 4) (EBlock [EProcCall "fd" [ENum 200], EProcCall "lt" [ENum 90]])
+  46  
+  47  data Bop
+  48      = Add | Sub | Mul | Div deriving (Eq)
+  49  
+  50  instance Show Bop where
+  51      show Add = "+" 
+  52      show Sub = "-"
+  53      show Mul = "*"
+  54      show Div = "/"
+  55  
+  56  plusR :: ReadP Bop
+  57  plusR = skipSpaces *> (Add <$ string "+")
+  58      +++ skipSpaces *> (Sub <$ string "-")
+  59  
+  60  multR :: ReadP Bop
+  61  multR = skipSpaces *> (Mul <$ string "*")
+  62      +++ skipSpaces *> (Div <$ string "/")
+  63  
+  64  data Rop
+  65      = Lt | Gt deriving (Eq)
+  66  
+  67  instance Show Rop where
+  68      show Lt = "<"
+  69      show Gt = ">"
+  70  
+  71  ropR :: ReadP Rop
+  72  ropR = skipSpaces *> (Lt <$ string "<")
+  73      +++ skipSpaces *> (Gt <$ string ">")
+  74  
+  75  --
+  76  
+  77  instance Read Expr where
+  78      readsPrec _ = readP_to_S userInputR
+  79  
+  80  userInputR :: ReadP Expr
+  81  userInputR =  exprR +++ procdefR
+  82  
+  83  procdefR :: ReadP Expr
+  84  procdefR = EProcDef <$> (string "proc" *> idenR) <*> many1 idenR
+  85  
+  86  idenR :: ReadP String
+  87  idenR = skipSpaces *> munch1 isLetter
+  88  
+  89  exprR :: ReadP Expr
+  90  exprR = ECompare <$> arithexprR <*> ropR <*> arithexprR
+  91  
+  92  arithexprR :: ReadP Expr
+  93  arithexprR = EArith <$> multiveR <*> plusR <*> multiveR
+  94  
+  95  multiveR :: ReadP Expr
+  96  multiveR = undefined
+  97  
+  98  callprocR :: ReadP Expr
+  99  callprocR = EProcCall <$> idenR <*> many exprR
+[1 of 1] Compiling Syntax           ( src/Syntax.hs, interpreted )
+
+src/Syntax.hs:38:39: error:
+    • Couldn't match expected type ‘Expr’ with actual type ‘Bop’
+    • In the first argument of ‘show'’, namely ‘e1’
+      In the expression: show' e1
+      In the first argument of ‘unwords’, namely
+        ‘[show' e1, show op, show' e1]’
+   |
+38 |     EArith op e1 e2 -> unwords [show' e1, show op, show' e1]
+   |                                       ^^
+
+src/Syntax.hs:38:58: error:
+    • Couldn't match expected type ‘Expr’ with actual type ‘Bop’
+    • In the first argument of ‘show'’, namely ‘e1’
+      In the expression: show' e1
+      In the first argument of ‘unwords’, namely
+        ‘[show' e1, show op, show' e1]’
+   |
+38 |     EArith op e1 e2 -> unwords [show' e1, show op, show' e1]
+   |                                                          ^^
+
+src/Syntax.hs:58:9: error:
+    • Couldn't match type ‘()’ with ‘Bop’
+      Expected: ReadP Bop
+        Actual: ReadP ()
+    • In the second argument of ‘(+++)’, namely ‘skipSpaces’
+      In the second argument of ‘(*>)’, namely
+        ‘(Add <$ string "+") +++ skipSpaces’
+      In the first argument of ‘(*>)’, namely
+        ‘skipSpaces *> (Add <$ string "+") +++ skipSpaces’
+   |
+58 |     +++ skipSpaces *> (Sub <$ string "-")
+   |         ^^^^^^^^^^
+
+src/Syntax.hs:62:9: error:
+    • Couldn't match type ‘()’ with ‘Bop’
+      Expected: ReadP Bop
+        Actual: ReadP ()
+    • In the second argument of ‘(+++)’, namely ‘skipSpaces’
+      In the second argument of ‘(*>)’, namely
+        ‘(Mul <$ string "*") +++ skipSpaces’
+      In the first argument of ‘(*>)’, namely
+        ‘skipSpaces *> (Mul <$ string "*") +++ skipSpaces’
+   |
+62 |     +++ skipSpaces *> (Div <$ string "/")
+   |         ^^^^^^^^^^
+
+src/Syntax.hs:73:9: error:
+    • Couldn't match type ‘()’ with ‘Rop’
+      Expected: ReadP Rop
+        Actual: ReadP ()
+    • In the second argument of ‘(+++)’, namely ‘skipSpaces’
+      In the second argument of ‘(*>)’, namely
+        ‘(Lt <$ string "<") +++ skipSpaces’
+      In the first argument of ‘(*>)’, namely
+        ‘skipSpaces *> (Lt <$ string "<") +++ skipSpaces’
+   |
+73 |     +++ skipSpaces *> (Gt <$ string ">")
+   |         ^^^^^^^^^^
+Failed, no modules loaded.
+2022-12-22 19:24:18.780210331
+>>> :e
+   1  module Syntax 
+   2      where
+   3  
+   4  import Data.Char
+   5  import Data.List
+   6  import Text.ParserCombinators.ReadP
+   7  
+   8  data Expr
+   9      = ENum Float
+  10      | EVar String
+  11      | ERepeat Expr Expr
+  12      | EBlock [Expr]
+  13      | EWhen Expr Expr
+  14      | EIf Expr Expr Expr
+  15      | EProcCall String [Expr]
+  16      | EArith Expr Bop Expr
+  17      | ECompare Expr Rop Expr
+  18      | EProcDef String [String]
+  19      deriving (Eq, Show)
+  20  
+  21  isAtom :: Expr -> Bool
+  22  isAtom (ENum _) = True
+  23  isAtom (EVar _) = True
+  24  isAtom _ = False
+  25  
+  26  -- instance Show Expr where
+  27  --     show = showExpr
+  28  
+  29  showExpr :: Expr -> String
+  30  showExpr e = case e of
+  31      ENum x -> show x
+  32      EVar v -> v
+  33      ERepeat e1 e2 -> intercalate " " ["repeat", showExpr e1, showExpr e2]
+  34      EBlock es -> intercalate " " (["begin"] ++ map showExpr es ++ ["end"])
+  35      EWhen e1 e2 -> intercalate " " (["when"] ++ map showExpr [e1, e2])
+  36      EIf e1 e2 e3 -> intercalate " " ["if", showExpr e1, "then", showExpr e2, "else", showExpr e3]
+  37      EProcCall proc vs -> intercalate " " ([proc] ++ map showExpr vs)
+  38      EArith e1 op e2 -> unwords [show' e1, show op, show' e1]
+  39          where
+  40              show' e | isAtom e = show e
+  41                      | otherwise = "(" ++ show e ++ ")"
+  42      EProcDef proc vs -> unwords (proc : vs)
+  43  
+  44  sample1 :: Expr
+  45  sample1 = ERepeat (ENum 4) (EBlock [EProcCall "fd" [ENum 200], EProcCall "lt" [ENum 90]])
+  46  
+  47  data Bop
+  48      = Add | Sub | Mul | Div deriving (Eq)
+  49  
+  50  instance Show Bop where
+  51      show Add = "+" 
+  52      show Sub = "-"
+  53      show Mul = "*"
+  54      show Div = "/"
+  55  
+  56  plusR :: ReadP Bop
+  57  plusR = skipSpaces *> (Add <$ string "+")
+  58      +++ skipSpaces *> (Sub <$ string "-")
+  59  
+  60  multR :: ReadP Bop
+  61  multR = skipSpaces *> (Mul <$ string "*")
+  62      +++ skipSpaces *> (Div <$ string "/")
+  63  
+  64  data Rop
+  65      = Lt | Gt deriving (Eq)
+  66  
+  67  instance Show Rop where
+  68      show Lt = "<"
+  69      show Gt = ">"
+  70  
+  71  ropR :: ReadP Rop
+  72  ropR = skipSpaces *> (Lt <$ string "<")
+  73      +++ skipSpaces *> (Gt <$ string ">")
+  74  
+  75  --
+  76  
+  77  instance Read Expr where
+  78      readsPrec _ = readP_to_S userInputR
+  79  
+  80  userInputR :: ReadP Expr
+  81  userInputR =  exprR +++ procdefR
+  82  
+  83  procdefR :: ReadP Expr
+  84  procdefR = EProcDef <$> (string "proc" *> idenR) <*> many1 idenR
+  85  
+  86  idenR :: ReadP String
+  87  idenR = skipSpaces *> munch1 isLetter
+  88  
+  89  exprR :: ReadP Expr
+  90  exprR = ECompare <$> arithexprR <*> ropR <*> arithexprR
+  91  
+  92  arithexprR :: ReadP Expr
+  93  arithexprR = EArith <$> multiveR <*> plusR <*> multiveR
+  94  
+  95  multiveR :: ReadP Expr
+  96  multiveR = undefined
+  97  
+  98  callprocR :: ReadP Expr
+  99  callprocR = EProcCall <$> idenR <*> many exprR
+[1 of 1] Compiling Syntax           ( src/Syntax.hs, interpreted )
+
+src/Syntax.hs:58:9: error:
+    • Couldn't match type ‘()’ with ‘Bop’
+      Expected: ReadP Bop
+        Actual: ReadP ()
+    • In the second argument of ‘(+++)’, namely ‘skipSpaces’
+      In the second argument of ‘(*>)’, namely
+        ‘(Add <$ string "+") +++ skipSpaces’
+      In the first argument of ‘(*>)’, namely
+        ‘skipSpaces *> (Add <$ string "+") +++ skipSpaces’
+   |
+58 |     +++ skipSpaces *> (Sub <$ string "-")
+   |         ^^^^^^^^^^
+
+src/Syntax.hs:62:9: error:
+    • Couldn't match type ‘()’ with ‘Bop’
+      Expected: ReadP Bop
+        Actual: ReadP ()
+    • In the second argument of ‘(+++)’, namely ‘skipSpaces’
+      In the second argument of ‘(*>)’, namely
+        ‘(Mul <$ string "*") +++ skipSpaces’
+      In the first argument of ‘(*>)’, namely
+        ‘skipSpaces *> (Mul <$ string "*") +++ skipSpaces’
+   |
+62 |     +++ skipSpaces *> (Div <$ string "/")
+   |         ^^^^^^^^^^
+
+src/Syntax.hs:73:9: error:
+    • Couldn't match type ‘()’ with ‘Rop’
+      Expected: ReadP Rop
+        Actual: ReadP ()
+    • In the second argument of ‘(+++)’, namely ‘skipSpaces’
+      In the second argument of ‘(*>)’, namely
+        ‘(Lt <$ string "<") +++ skipSpaces’
+      In the first argument of ‘(*>)’, namely
+        ‘skipSpaces *> (Lt <$ string "<") +++ skipSpaces’
+   |
+73 |     +++ skipSpaces *> (Gt <$ string ">")
+   |         ^^^^^^^^^^
+Failed, no modules loaded.
+2022-12-22 19:26:07.233643433
+>>> :e
+   1  module Syntax 
+   2      where
+   3  
+   4  import Data.Char
+   5  import Data.List
+   6  import Text.ParserCombinators.ReadP
+   7  
+   8  data Expr
+   9      = ENum Float
+  10      | EVar String
+  11      | ERepeat Expr Expr
+  12      | EBlock [Expr]
+  13      | EWhen Expr Expr
+  14      | EIf Expr Expr Expr
+  15      | EProcCall String [Expr]
+  16      | EArith Expr Bop Expr
+  17      | ECompare Expr Rop Expr
+  18      | EProcDef String [String]
+  19      deriving (Eq, Show)
+  20  
+  21  isAtom :: Expr -> Bool
+  22  isAtom (ENum _) = True
+  23  isAtom (EVar _) = True
+  24  isAtom _ = False
+  25  
+  26  -- instance Show Expr where
+  27  --     show = showExpr
+  28  
+  29  showExpr :: Expr -> String
+  30  showExpr e = case e of
+  31      ENum x -> show x
+  32      EVar v -> v
+  33      ERepeat e1 e2 -> intercalate " " ["repeat", showExpr e1, showExpr e2]
+  34      EBlock es -> intercalate " " (["begin"] ++ map showExpr es ++ ["end"])
+  35      EWhen e1 e2 -> intercalate " " (["when"] ++ map showExpr [e1, e2])
+  36      EIf e1 e2 e3 -> intercalate " " ["if", showExpr e1, "then", showExpr e2, "else", showExpr e3]
+  37      EProcCall proc vs -> intercalate " " ([proc] ++ map showExpr vs)
+  38      EArith e1 op e2 -> unwords [show' e1, show op, show' e1]
+  39          where
+  40              show' e | isAtom e = show e
+  41                      | otherwise = "(" ++ show e ++ ")"
+  42      EProcDef proc vs -> unwords (proc : vs)
+  43  
+  44  sample1 :: Expr
+  45  sample1 = ERepeat (ENum 4) (EBlock [EProcCall "fd" [ENum 200], EProcCall "lt" [ENum 90]])
+  46  
+  47  data Bop
+  48      = Add | Sub | Mul | Div deriving (Eq)
+  49  
+  50  instance Show Bop where
+  51      show Add = "+" 
+  52      show Sub = "-"
+  53      show Mul = "*"
+  54      show Div = "/"
+  55  
+  56  plusR :: ReadP Bop
+  57  plusR = (skipSpaces *> (Add <$ string "+"))
+  58      +++ (skipSpaces *> (Sub <$ string "-"))
+  59  
+  60  multR :: ReadP Bop
+  61  multR = skipSpaces *> (Mul <$ string "*")
+  62      +++ skipSpaces *> (Div <$ string "/")
+  63  
+  64  data Rop
+  65      = Lt | Gt deriving (Eq)
+  66  
+  67  instance Show Rop where
+  68      show Lt = "<"
+  69      show Gt = ">"
+  70  
+  71  ropR :: ReadP Rop
+  72  ropR = skipSpaces *> (Lt <$ string "<")
+  73      +++ skipSpaces *> (Gt <$ string ">")
+  74  
+  75  --
+  76  
+  77  instance Read Expr where
+  78      readsPrec _ = readP_to_S userInputR
+  79  
+  80  userInputR :: ReadP Expr
+  81  userInputR =  exprR +++ procdefR
+  82  
+  83  procdefR :: ReadP Expr
+  84  procdefR = EProcDef <$> (string "proc" *> idenR) <*> many1 idenR
+  85  
+  86  idenR :: ReadP String
+  87  idenR = skipSpaces *> munch1 isLetter
+  88  
+  89  exprR :: ReadP Expr
+  90  exprR = ECompare <$> arithexprR <*> ropR <*> arithexprR
+  91  
+  92  arithexprR :: ReadP Expr
+  93  arithexprR = EArith <$> multiveR <*> plusR <*> multiveR
+  94  
+  95  multiveR :: ReadP Expr
+  96  multiveR = undefined
+  97  
+  98  callprocR :: ReadP Expr
+  99  callprocR = EProcCall <$> idenR <*> many exprR
+[1 of 1] Compiling Syntax           ( src/Syntax.hs, interpreted )
+
+src/Syntax.hs:62:9: error:
+    • Couldn't match type ‘()’ with ‘Bop’
+      Expected: ReadP Bop
+        Actual: ReadP ()
+    • In the second argument of ‘(+++)’, namely ‘skipSpaces’
+      In the second argument of ‘(*>)’, namely
+        ‘(Mul <$ string "*") +++ skipSpaces’
+      In the first argument of ‘(*>)’, namely
+        ‘skipSpaces *> (Mul <$ string "*") +++ skipSpaces’
+   |
+62 |     +++ skipSpaces *> (Div <$ string "/")
+   |         ^^^^^^^^^^
+
+src/Syntax.hs:73:9: error:
+    • Couldn't match type ‘()’ with ‘Rop’
+      Expected: ReadP Rop
+        Actual: ReadP ()
+    • In the second argument of ‘(+++)’, namely ‘skipSpaces’
+      In the second argument of ‘(*>)’, namely
+        ‘(Lt <$ string "<") +++ skipSpaces’
+      In the first argument of ‘(*>)’, namely
+        ‘skipSpaces *> (Lt <$ string "<") +++ skipSpaces’
+   |
+73 |     +++ skipSpaces *> (Gt <$ string ">")
+   |         ^^^^^^^^^^
+Failed, no modules loaded.
+2022-12-22 19:28:06.005096254
+>>> :e
+   1  module Syntax 
+   2      where
+   3  
+   4  import Data.Char
+   5  import Data.List
+   6  import Text.ParserCombinators.ReadP
+   7  
+   8  data Expr
+   9      = ENum Float
+  10      | EVar String
+  11      | ERepeat Expr Expr
+  12      | EBlock [Expr]
+  13      | EWhen Expr Expr
+  14      | EIf Expr Expr Expr
+  15      | EProcCall String [Expr]
+  16      | EArith Expr Bop Expr
+  17      | ECompare Expr Rop Expr
+  18      | EProcDef String [String]
+  19      deriving (Eq, Show)
+  20  
+  21  isAtom :: Expr -> Bool
+  22  isAtom (ENum _) = True
+  23  isAtom (EVar _) = True
+  24  isAtom _ = False
+  25  
+  26  -- instance Show Expr where
+  27  --     show = showExpr
+  28  
+  29  showExpr :: Expr -> String
+  30  showExpr e = case e of
+  31      ENum x -> show x
+  32      EVar v -> v
+  33      ERepeat e1 e2 -> intercalate " " ["repeat", showExpr e1, showExpr e2]
+  34      EBlock es -> intercalate " " (["begin"] ++ map showExpr es ++ ["end"])
+  35      EWhen e1 e2 -> intercalate " " (["when"] ++ map showExpr [e1, e2])
+  36      EIf e1 e2 e3 -> intercalate " " ["if", showExpr e1, "then", showExpr e2, "else", showExpr e3]
+  37      EProcCall proc vs -> intercalate " " ([proc] ++ map showExpr vs)
+  38      EArith e1 op e2 -> unwords [show' e1, show op, show' e1]
+  39          where
+  40              show' e | isAtom e = show e
+  41                      | otherwise = "(" ++ show e ++ ")"
+  42      EProcDef proc vs -> unwords (proc : vs)
+  43  
+  44  sample1 :: Expr
+  45  sample1 = ERepeat (ENum 4) (EBlock [EProcCall "fd" [ENum 200], EProcCall "lt" [ENum 90]])
+  46  
+  47  data Bop
+  48      = Add | Sub | Mul | Div deriving (Eq)
+  49  
+  50  instance Show Bop where
+  51      show Add = "+" 
+  52      show Sub = "-"
+  53      show Mul = "*"
+  54      show Div = "/"
+  55  
+  56  plusR :: ReadP Bop
+  57  plusR = (skipSpaces *> (Add <$ string "+"))
+  58      +++ (skipSpaces *> (Sub <$ string "-"))
+  59  
+  60  multR :: ReadP Bop
+  61  multR = (skipSpaces *> (Mul <$ string "*"))
+  62      +++ (skipSpaces *> (Div <$ string "/"))
+  63  
+  64  data Rop
+  65      = Lt | Gt deriving (Eq)
+  66  
+  67  instance Show Rop where
+  68      show Lt = "<"
+  69      show Gt = ">"
+  70  
+  71  ropR :: ReadP Rop
+  72  ropR = skipSpaces *> (Lt <$ string "<")
+  73      +++ skipSpaces *> (Gt <$ string ">")
+  74  
+  75  --
+  76  
+  77  instance Read Expr where
+  78      readsPrec _ = readP_to_S userInputR
+  79  
+  80  userInputR :: ReadP Expr
+  81  userInputR =  exprR +++ procdefR
+  82  
+  83  procdefR :: ReadP Expr
+  84  procdefR = EProcDef <$> (string "proc" *> idenR) <*> many1 idenR
+  85  
+  86  idenR :: ReadP String
+  87  idenR = skipSpaces *> munch1 isLetter
+  88  
+  89  exprR :: ReadP Expr
+  90  exprR = ECompare <$> arithexprR <*> ropR <*> arithexprR
+  91  
+  92  arithexprR :: ReadP Expr
+  93  arithexprR = EArith <$> multiveR <*> plusR <*> multiveR
+  94  
+  95  multiveR :: ReadP Expr
+  96  multiveR = undefined
+  97  
+  98  callprocR :: ReadP Expr
+  99  callprocR = EProcCall <$> idenR <*> many exprR
+[1 of 1] Compiling Syntax           ( src/Syntax.hs, interpreted )
+
+src/Syntax.hs:73:9: error:
+    • Couldn't match type ‘()’ with ‘Rop’
+      Expected: ReadP Rop
+        Actual: ReadP ()
+    • In the second argument of ‘(+++)’, namely ‘skipSpaces’
+      In the second argument of ‘(*>)’, namely
+        ‘(Lt <$ string "<") +++ skipSpaces’
+      In the first argument of ‘(*>)’, namely
+        ‘skipSpaces *> (Lt <$ string "<") +++ skipSpaces’
+   |
+73 |     +++ skipSpaces *> (Gt <$ string ">")
+   |         ^^^^^^^^^^
+Failed, no modules loaded.
+2022-12-22 19:28:27.059761121
+>>> :e
+   1  module Syntax 
+   2      where
+   3  
+   4  import Data.Char
+   5  import Data.List
+   6  import Text.ParserCombinators.ReadP
+   7  
+   8  data Expr
+   9      = ENum Float
+  10      | EVar String
+  11      | ERepeat Expr Expr
+  12      | EBlock [Expr]
+  13      | EWhen Expr Expr
+  14      | EIf Expr Expr Expr
+  15      | EProcCall String [Expr]
+  16      | EArith Expr Bop Expr
+  17      | ECompare Expr Rop Expr
+  18      | EProcDef String [String]
+  19      deriving (Eq, Show)
+  20  
+  21  isAtom :: Expr -> Bool
+  22  isAtom (ENum _) = True
+  23  isAtom (EVar _) = True
+  24  isAtom _ = False
+  25  
+  26  -- instance Show Expr where
+  27  --     show = showExpr
+  28  
+  29  showExpr :: Expr -> String
+  30  showExpr e = case e of
+  31      ENum x -> show x
+  32      EVar v -> v
+  33      ERepeat e1 e2 -> intercalate " " ["repeat", showExpr e1, showExpr e2]
+  34      EBlock es -> intercalate " " (["begin"] ++ map showExpr es ++ ["end"])
+  35      EWhen e1 e2 -> intercalate " " (["when"] ++ map showExpr [e1, e2])
+  36      EIf e1 e2 e3 -> intercalate " " ["if", showExpr e1, "then", showExpr e2, "else", showExpr e3]
+  37      EProcCall proc vs -> intercalate " " ([proc] ++ map showExpr vs)
+  38      EArith e1 op e2 -> unwords [show' e1, show op, show' e1]
+  39          where
+  40              show' e | isAtom e = show e
+  41                      | otherwise = "(" ++ show e ++ ")"
+  42      EProcDef proc vs -> unwords (proc : vs)
+  43  
+  44  sample1 :: Expr
+  45  sample1 = ERepeat (ENum 4) (EBlock [EProcCall "fd" [ENum 200], EProcCall "lt" [ENum 90]])
+  46  
+  47  data Bop
+  48      = Add | Sub | Mul | Div deriving (Eq)
+  49  
+  50  instance Show Bop where
+  51      show Add = "+" 
+  52      show Sub = "-"
+  53      show Mul = "*"
+  54      show Div = "/"
+  55  
+  56  plusR :: ReadP Bop
+  57  plusR = (skipSpaces *> (Add <$ string "+"))
+  58      +++ (skipSpaces *> (Sub <$ string "-"))
+  59  
+  60  multR :: ReadP Bop
+  61  multR = (skipSpaces *> (Mul <$ string "*"))
+  62      +++ (skipSpaces *> (Div <$ string "/"))
+  63  
+  64  data Rop
+  65      = Lt | Gt deriving (Eq)
+  66  
+  67  instance Show Rop where
+  68      show Lt = "<"
+  69      show Gt = ">"
+  70  
+  71  ropR :: ReadP Rop
+  72  ropR = (skipSpaces *> (Lt <$ string "<"))
+  73      +++ (skipSpaces *> (Gt <$ string ">"))
+  74  
+  75  --
+  76  
+  77  instance Read Expr where
+  78      readsPrec _ = readP_to_S userInputR
+  79  
+  80  userInputR :: ReadP Expr
+  81  userInputR =  exprR +++ procdefR
+  82  
+  83  procdefR :: ReadP Expr
+  84  procdefR = EProcDef <$> (string "proc" *> idenR) <*> many1 idenR
+  85  
+  86  idenR :: ReadP String
+  87  idenR = skipSpaces *> munch1 isLetter
+  88  
+  89  exprR :: ReadP Expr
+  90  exprR = ECompare <$> arithexprR <*> ropR <*> arithexprR
+  91  
+  92  arithexprR :: ReadP Expr
+  93  arithexprR = EArith <$> multiveR <*> plusR <*> multiveR
+  94  
+  95  multiveR :: ReadP Expr
+  96  multiveR = undefined
+  97  
+  98  callprocR :: ReadP Expr
+  99  callprocR = EProcCall <$> idenR <*> many exprR
+[1 of 1] Compiling Syntax           ( src/Syntax.hs, interpreted )
+Ok, one module loaded.
+2022-12-22 19:28:45.711568542
+>>> Stack has not been tested with GHC versions above 9.0, and using 9.2.4, this may fail
+Stack has not been tested with Cabal versions above 3.4, but version 3.6.3.0 was found, this may fail
+GHCi, version 9.2.4: https://www.haskell.org/ghc/  :? for help
+Loaded GHCi configuration from /home/nanaka/logo2022/.ghci
+2023-01-12 18:00:26.740829084
+>>> :q
+Leaving GHCi.
+Stack has not been tested with GHC versions above 9.0, and using 9.2.5, this may fail
+Stack has not been tested with Cabal versions above 3.4, but version 3.6.3.0 was found, this may fail
+GHCi, version 9.2.5: https://www.haskell.org/ghc/  :? for help
+Loaded GHCi configuration from /home/nanaka/logo2022/.ghci
+2023-01-12 18:28:39.05911131
+>>> read (head (lines sample)) :: Expr
+
+<interactive>:1:31: error:
+    Not in scope: type constructor or class ‘Expr’
+2023-01-12 18:29:31.229757957
+>>> :e src/Syntax.hs
+   1  module Syntax 
+   2      where
+   3  
+   4  import Data.Char
+   5  import Data.List
+   6  import Text.ParserCombinators.ReadP
+   7  
+   8  data Expr
+   9      = ENum Float
+  10      | EVar String
+  11      | ERepeat Expr Expr
+  12      | EBlock [Expr]
+  13      | EWhen Expr Expr
+  14      | EIf Expr Expr Expr
+  15      | EProcCall String [Expr]
+  16      | EArith Expr Bop Expr
+  17      | ECompare Expr Rop Expr
+  18      | EProcDef String [String]
+  19      deriving (Eq, Show)
+  20  
+  21  isAtom :: Expr -> Bool
+  22  isAtom (ENum _) = True
+  23  isAtom (EVar _) = True
+  24  isAtom _ = False
+  25  
+  26  -- instance Show Expr where
+  27  --     show = showExpr
+  28  
+  29  showExpr :: Expr -> String
+  30  showExpr e = case e of
+  31      ENum x -> show x
+  32      EVar v -> v
+  33      ERepeat e1 e2 -> intercalate " " ["repeat", showExpr e1, showExpr e2]
+  34      EBlock es -> intercalate " " (["begin"] ++ map showExpr es ++ ["end"])
+  35      EWhen e1 e2 -> intercalate " " (["when"] ++ map showExpr [e1, e2])
+  36      EIf e1 e2 e3 -> intercalate " " ["if", showExpr e1, "then", showExpr e2, "else", showExpr e3]
+  37      EProcCall proc vs -> intercalate " " ([proc] ++ map showExpr vs)
+  38      EArith e1 op e2 -> unwords [show' e1, show op, show' e1]
+  39          where
+  40              show' e | isAtom e = show e
+  41                      | otherwise = "(" ++ show e ++ ")"
+  42      EProcDef proc vs -> unwords (proc : vs)
+  43  
+  44  sample1 :: Expr
+  45  sample1 = ERepeat (ENum 4) (EBlock [EProcCall "fd" [ENum 200], EProcCall "lt" [ENum 90]])
+  46  
+  47  data Bop
+  48      = Add | Sub | Mul | Div deriving (Eq)
+  49  
+  50  instance Show Bop where
+  51      show Add = "+" 
+  52      show Sub = "-"
+  53      show Mul = "*"
+  54      show Div = "/"
+  55  
+  56  plusR :: ReadP Bop
+  57  plusR = (skipSpaces *> (Add <$ string "+"))
+  58      +++ (skipSpaces *> (Sub <$ string "-"))
+  59  
+  60  multR :: ReadP Bop
+  61  multR = (skipSpaces *> (Mul <$ string "*"))
+  62      +++ (skipSpaces *> (Div <$ string "/"))
+  63  
+  64  data Rop
+  65      = Lt | Gt deriving (Eq)
+  66  
+  67  instance Show Rop where
+  68      show Lt = "<"
+  69      show Gt = ">"
+  70  
+  71  ropR :: ReadP Rop
+  72  ropR = (skipSpaces *> (Lt <$ string "<"))
+  73      +++ (skipSpaces *> (Gt <$ string ">"))
+  74  
+  75  --
+  76  
+  77  instance Read Expr where
+  78      readsPrec _ = readP_to_S userInputR
+  79  
+  80  userInputR :: ReadP Expr
+  81  userInputR =  exprR +++ procdefR
+  82  
+  83  sample = unlines
+  84      ["proc tree :n"
+  85      ,"if :n < 5 then stop"
+  86      ,"fd(:n)"
+  87      ,"lt(30) tree(product(:n,0.7))"
+  88      ,"rt(60) tree(:n * 0.7)"
+  89      ,"lt(30) bk(:n)"
+  90      ,"end"
+  91      ]
+  92  
+  93  {- |
+  94  procdefR
+  95  >>> read (head (lines sample)) :: Expr
+  96  -}
+  97  procdefR :: ReadP Expr
+  98  procdefR = EProcDef <$> (string "proc" *> idenR) <*> many1 idenR
+  99  
+ 100  idenR :: ReadP String
+ 101  idenR = skipSpaces *> munch1 isLetter
+ 102  
+ 103  exprR :: ReadP Expr
+ 104  exprR = ECompare <$> arithexprR <*> ropR <*> arithexprR
+ 105  
+ 106  arithexprR :: ReadP Expr
+ 107  arithexprR = EArith <$> multiveR <*> plusR <*> multiveR
+ 108  
+ 109  multiveR :: ReadP Expr
+ 110  multiveR = undefined
+ 111  
+ 112  callprocR :: ReadP Expr
+ 113  callprocR = EProcCall <$> idenR <*> many exprR
+ 114  
+Ok, no modules loaded.
+2023-01-12 18:30:02.39489966
+>>> :l src/Syntax.hs
+[1 of 1] Compiling Syntax           ( src/Syntax.hs, interpreted )
+Ok, one module loaded.
+2023-01-12 18:30:02.570732763
+>>> read (head (lines sample)) :: Expr
+*** Exception: Prelude.undefined
+CallStack (from HasCallStack):
+  error, called at libraries/base/GHC/Err.hs:74:14 in base:GHC.Err
+  undefined, called at src/Syntax.hs:110:12 in main:Syntax
+2023-01-12 18:30:07.457733302
+>>> Stack has not been tested with GHC versions above 9.0, and using 9.2.5, this may fail
+Stack has not been tested with Cabal versions above 3.4, but version 3.6.3.0 was found, this may fail
+GHCi, version 9.2.5: https://www.haskell.org/ghc/  :? for help
+Loaded GHCi configuration from /home/nanaka/logo2022/.ghci
+2023-01-12 18:38:48.858630906
+>>> :e src/Syntax.hs
+   1  module Syntax 
+   2      where
+   3  
+   4  import Data.Char
+   5  import Data.List
+   6  import Text.ParserCombinators.ReadP
+   7  
+   8  data Expr
+   9      = ENum Float
+  10      | EVar String
+  11      | ERepeat Expr Expr
+  12      | EBlock [Expr]
+  13      | EWhen Expr Expr
+  14      | EIf Expr Expr Expr
+  15      | EProcCall String [Expr]
+  16      | EArith Expr Bop Expr
+  17      | ECompare Expr Rop Expr
+  18      | EProcDef String [String]
+  19      deriving (Eq, Show)
+  20  
+  21  isAtom :: Expr -> Bool
+  22  isAtom (ENum _) = True
+  23  isAtom (EVar _) = True
+  24  isAtom _ = False
+  25  
+  26  -- instance Show Expr where
+  27  --     show = showExpr
+  28  
+  29  showExpr :: Expr -> String
+  30  showExpr e = case e of
+  31      ENum x -> show x
+  32      EVar v -> v
+  33      ERepeat e1 e2 -> intercalate " " ["repeat", showExpr e1, showExpr e2]
+  34      EBlock es -> intercalate " " (["begin"] ++ map showExpr es ++ ["end"])
+  35      EWhen e1 e2 -> intercalate " " (["when"] ++ map showExpr [e1, e2])
+  36      EIf e1 e2 e3 -> intercalate " " ["if", showExpr e1, "then", showExpr e2, "else", showExpr e3]
+  37      EProcCall proc vs -> intercalate " " ([proc] ++ map showExpr vs)
+  38      EArith e1 op e2 -> unwords [show' e1, show op, show' e1]
+  39          where
+  40              show' e | isAtom e = show e
+  41                      | otherwise = "(" ++ show e ++ ")"
+  42      EProcDef proc vs -> unwords (proc : vs)
+  43  
+  44  sample1 :: Expr
+  45  sample1 = ERepeat (ENum 4) (EBlock [EProcCall "fd" [ENum 200], EProcCall "lt" [ENum 90]])
+  46  
+  47  data Bop
+  48      = Add | Sub | Mul | Div deriving (Eq)
+  49  
+  50  instance Show Bop where
+  51      show Add = "+" 
+  52      show Sub = "-"
+  53      show Mul = "*"
+  54      show Div = "/"
+  55  
+  56  plusR :: ReadP Bop
+  57  plusR = (skipSpaces *> (Add <$ string "+"))
+  58      +++ (skipSpaces *> (Sub <$ string "-"))
+  59  
+  60  multR :: ReadP Bop
+  61  multR = (skipSpaces *> (Mul <$ string "*"))
+  62      +++ (skipSpaces *> (Div <$ string "/"))
+  63  
+  64  data Rop
+  65      = Lt | Gt deriving (Eq)
+  66  
+  67  instance Show Rop where
+  68      show Lt = "<"
+  69      show Gt = ">"
+  70  
+  71  ropR :: ReadP Rop
+  72  ropR = (skipSpaces *> (Lt <$ string "<"))
+  73      +++ (skipSpaces *> (Gt <$ string ">"))
+  74  
+  75  --
+  76  
+  77  instance Read Expr where
+  78      readsPrec _ = readP_to_S userInputR
+  79  
+  80  userInputR :: ReadP Expr
+  81  userInputR =  exprR +++ procdefR
+  82  
+  83  sample = unlines
+  84      ["proc tree n"
+  85      ,"if n < 5 then stop"
+  86      ,"fd(n)"
+  87      ,"lt(30) tree(product(n,0.7))"
+  88      ,"rt(60) tree(n * 0.7)"
+  89      ,"lt(30) bk(n)"
+  90      ,"end"
+  91      ]
+  92  
+  93  {- |
+  94  procdefR
+  95  >>> read (head (lines sample)) :: Expr
+  96  -}
+  97  procdefR :: ReadP Expr
+  98  procdefR = EProcDef <$> (string "proc" *> idenR) <*> many1 idenR
+  99  
+ 100  idenR :: ReadP String
+ 101  idenR = skipSpaces *> munch1 isLetter
+ 102  
+ 103  exprR :: ReadP Expr
+ 104  exprR = ECompare <$> arithexprR <*> ropR <*> arithexprR
+ 105  
+ 106  arithexprR :: ReadP Expr
+ 107  arithexprR = EArith <$> multiveR <*> plusR <*> multiveR
+ 108  
+ 109  multiveR :: ReadP Expr
+ 110  multiveR = undefined
+ 111  
+ 112  callprocR :: ReadP Expr
+ 113  callprocR = EProcCall <$> idenR <*> many exprR
+ 114  
+Ok, no modules loaded.
+2023-01-12 18:39:04.62282155
+>>> :l src/Syntax.hs
+[1 of 1] Compiling Syntax           ( src/Syntax.hs, interpreted )
+Ok, one module loaded.
+2023-01-12 18:39:04.841731583
+>>> read (head (lines sample)) :: Expr
+*** Exception: Prelude.undefined
+CallStack (from HasCallStack):
+  error, called at libraries/base/GHC/Err.hs:74:14 in base:GHC.Err
+  undefined, called at src/Syntax.hs:110:12 in main:Syntax
+2023-01-12 18:39:49.177640243
+>>> :t readP_to_S procdefR 
+readP_to_S procdefR :: ReadS Expr
+2023-01-12 18:43:13.907275854
+>>> :i ReadS
+type ReadS :: * -> *
+type ReadS a = String -> [(a, String)]
+  	-- Defined in ‘Text.ParserCombinators.ReadP’
+2023-01-12 18:43:37.758135226
+>>> readP_to_S procdefR (head (lines sample))  
+[(EProcDef "tree" ["n"],"")]
+2023-01-12 18:44:39.218862336
+>>> readP_to_S exprR (head (lines sample))  
+*** Exception: Prelude.undefined
+CallStack (from HasCallStack):
+  error, called at libraries/base/GHC/Err.hs:74:14 in base:GHC.Err
+  undefined, called at src/Syntax.hs:110:12 in main:Syntax
+2023-01-12 18:49:13.252876711
+>>> :e
+   1  module Syntax 
+   2      where
+   3  
+   4  import Data.Char
+   5  import Data.List
+   6  import Text.ParserCombinators.ReadP
+   7  
+   8  data Expr
+   9      = ENum Float
+  10      | EVar String
+  11      | ERepeat Expr Expr
+  12      | EBlock [Expr]
+  13      | EWhen Expr Expr
+  14      | EIf Expr Expr Expr
+  15      | EProcCall String [Expr]
+  16      | EArith Expr Bop Expr
+  17      | ECompare Expr Rop Expr
+  18      | EProcDef String [String]
+  19      deriving (Eq, Show)
+  20  
+  21  isAtom :: Expr -> Bool
+  22  isAtom (ENum _) = True
+  23  isAtom (EVar _) = True
+  24  isAtom _ = False
+  25  
+  26  -- instance Show Expr where
+  27  --     show = showExpr
+  28  
+  29  showExpr :: Expr -> String
+  30  showExpr e = case e of
+  31      ENum x -> show x
+  32      EVar v -> v
+  33      ERepeat e1 e2 -> intercalate " " ["repeat", showExpr e1, showExpr e2]
+  34      EBlock es -> intercalate " " (["begin"] ++ map showExpr es ++ ["end"])
+  35      EWhen e1 e2 -> intercalate " " (["when"] ++ map showExpr [e1, e2])
+  36      EIf e1 e2 e3 -> intercalate " " ["if", showExpr e1, "then", showExpr e2, "else", showExpr e3]
+  37      EProcCall proc vs -> intercalate " " ([proc] ++ map showExpr vs)
+  38      EArith e1 op e2 -> unwords [show' e1, show op, show' e1]
+  39          where
+  40              show' e | isAtom e = show e
+  41                      | otherwise = "(" ++ show e ++ ")"
+  42      EProcDef proc vs -> unwords (proc : vs)
+  43  
+  44  sample1 :: Expr
+  45  sample1 = ERepeat (ENum 4) (EBlock [EProcCall "fd" [ENum 200], EProcCall "lt" [ENum 90]])
+  46  
+  47  data Bop
+  48      = Add | Sub | Mul | Div deriving (Eq)
+  49  
+  50  instance Show Bop where
+  51      show Add = "+" 
+  52      show Sub = "-"
+  53      show Mul = "*"
+  54      show Div = "/"
+  55  
+  56  plusR :: ReadP Bop
+  57  plusR = (skipSpaces *> (Add <$ string "+"))
+  58      +++ (skipSpaces *> (Sub <$ string "-"))
+  59  
+  60  multR :: ReadP Bop
+  61  multR = (skipSpaces *> (Mul <$ string "*"))
+  62      +++ (skipSpaces *> (Div <$ string "/"))
+  63  
+  64  data Rop
+  65      = Lt | Gt deriving (Eq)
+  66  
+  67  instance Show Rop where
+  68      show Lt = "<"
+  69      show Gt = ">"
+  70  
+  71  ropR :: ReadP Rop
+  72  ropR = (skipSpaces *> (Lt <$ string "<"))
+  73      +++ (skipSpaces *> (Gt <$ string ">"))
+  74  
+  75  --
+  76  
+  77  instance Read Expr where
+  78      readsPrec _ = readP_to_S userInputR
+  79  
+  80  userInputR :: ReadP Expr
+  81  userInputR =  exprR +++ procdefR
+  82  
+  83  sample = unlines
+  84      ["proc tree n"
+  85      ,"if n < 5 then stop"
+  86      ,"fd(n)"
+  87      ,"lt(30) tree(product(n,0.7))"
+  88      ,"rt(60) tree(n * 0.7)"
+  89      ,"lt(30) bk(n)"
+  90      ,"end"
+  91      ]
+  92  
+  93  {- |
+  94  procdefR
+  95  >>> read (head (lines sample)) :: Expr
+  96  -}
+  97  procdefR :: ReadP Expr
+  98  procdefR = EProcDef <$> (string "proc" *> idenR) <*> many1 idenR
+  99  
+ 100  idenR :: ReadP String
+ 101  idenR = skipSpaces *> munch1 isLetter
+ 102  
+ 103  exprR :: ReadP Expr
+ 104  exprR = ECompare <$> arithexprR <*> ropR <*> arithexprR
+ 105  
+ 106  arithexprR :: ReadP Expr
+ 107  arithexprR = EArith <$> multiveR <*> plusR <*> multiveR
+ 108  
+ 109  multiveR :: ReadP Expr
+ 110  multiveR = pfail
+ 111  
+ 112  callprocR :: ReadP Expr
+ 113  callprocR = EProcCall <$> idenR <*> many exprR
+ 114  
+[1 of 1] Compiling Syntax           ( src/Syntax.hs, interpreted )
+Ok, one module loaded.
+2023-01-12 18:51:50.501760617
+>>> readP_to_S exprR (head (lines sample))  
+[]
+2023-01-12 18:51:57.259487915
+>>> read (head (lines sample)) :: Expr 
+EProcDef "tree" ["n"]
+2023-01-12 18:53:03.031384982
+>>> 
