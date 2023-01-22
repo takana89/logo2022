@@ -4,7 +4,8 @@
 module World where
 
 import Data.Bool
-import Graphics.Gloss
+import Data.Maybe
+import Graphics.Gloss hiding (arc)
 import Graphics.Gloss.Data.Color
 import qualified Graphics.Gloss.Data.Picture as G
 import Graphics.Gloss.Data.Point
@@ -16,10 +17,15 @@ data World
     = World
     { control :: [String]
     , instructions :: [Instruction]
+    , acc :: Float
+    , accb :: Bool
+    , environment :: Env
     , turtle :: Turtle
     , pict   :: Maybe Picture 
     , wrap   :: Wrap
     }
+
+type Env = [(String,Float)]
 
 data Wrap
     = Wrap
@@ -30,6 +36,9 @@ data Wrap
 defaultWorld :: World
 defaultWorld = World { control = []
                      , instructions = defaultInstructions
+                     , acc = 0
+                     , accb = True
+                     , environment = []
                      , turtle = defaultTurtle 
                      , pict = Just (Pictures [defaultTurtle.curimg, blank])
                      , wrap = Wrap
@@ -283,3 +292,49 @@ defaultInstructions
       , fd 160
       ]
 
+proc0s :: [(String, Instruction)]
+proc0s = [ ("home", home)
+         , ("penup", penup)
+         , ("pendown", pendown)
+         , ("clean", clean)
+         , ("clearscreen", clearscreen)
+         ]
+proc1s :: [(String, Float -> Instruction)]
+proc1s = [ ("fd", fd)
+         , ("forward", forward)
+         , ("bk", bk)
+         , ("back", back)
+         , ("lt", lt)
+         , ("left", left)
+         , ("rt", rt)
+         , ("right", right)
+         , ("setx", setx)
+         , ("sety", sety)
+         , ("setheading", setheading)
+         ]
+proc2s :: [(String, Float -> Float -> Instruction)]
+proc2s = [ ("setxy", setxy)
+         , ("arc", arc)
+         ]
+arity :: [(String,Int)]
+arity =  [ ("home", 0)
+         , ("penup", 0)
+         , ("pendown", 0)
+         , ("clean", 0)
+         , ("clearscreen", 0)
+         ] ++
+         [ ("fd", 1)
+         , ("foreward", 1)
+         , ("bk", 1)
+         , ("back", 1)
+         , ("lt", 1)
+         , ("left", 1)
+         , ("rt", 1)
+         , ("right", 1)
+         , ("setx", 1)
+         , ("sety", 1)
+         , ("setheading", 1)
+         ] ++
+         [ ("setxy", 2)
+         , ("arc", 2)
+         ]

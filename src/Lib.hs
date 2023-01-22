@@ -28,4 +28,4 @@ module Lib
 なんか関数
 -}
 someFunc :: IO ()
-someFunc = putStrLn "なんか函数"
+someFunc = putStrLn "なんか関数"

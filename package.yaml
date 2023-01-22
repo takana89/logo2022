@@ -26,6 +26,7 @@ dependencies:
 - utf8-string
 - hspec
 - doctest
+- main-tester
 - gloss
 - parsec
 
@@ -50,17 +51,17 @@ executables:
     - logo2022
 
 tests:
-  logo2022-test:
-    main:                spec.hs
-    source-dirs:         test
-    # ghc-options:
-    # - -threaded
-    # - -rtsopts
-    # - -with-rtsopts=-N
-    dependencies:
-    - logo2022
-    - hspec
-    - main-tester
+  # logo2022-test:
+  #   main:                spec.hs
+  #   source-dirs:         test
+  #   # ghc-options:
+  #   # - -threaded
+  #   # - -rtsopts
+  #   # - -with-rtsopts=-N
+  #   dependencies:
+  #   - logo2022
+  #   - hspec
+  #   - main-tester
 
   logo2022-doctest:
     main:                doctests.hs

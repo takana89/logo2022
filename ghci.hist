@@ -1,0 +1,7 @@
+:q
+testR procdefR (sample' !! 0)
+:r
+testR procdefR (sample' !! 0)
+testR procdefR (sample !! 0)
+:l src/Syntax.hs
+testR procdefR (sample !! 0)

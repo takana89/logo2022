@@ -3,46 +3,59 @@ module Syntax
 
 import Data.Char
 import Data.List
+import Data.Ord
 import Numeric
 import Text.ParserCombinators.ReadP
+import World
 
-data Expr
+data Toplevel
+    = Exps [Term]
+    | Proc String [String]
+
+data Value
+    = Float Float
+    | Bool Bool
+    | Cmd [Instruction]
+    
+data Term
     = ENum Float
+    | EBool Bool
+    | EVoid
     | EVar String
-    | ERepeat Expr Expr
-    | EBlock [Expr]
-    | EWhen Expr Expr
-    | EIf Expr Expr Expr
-    | EProcCall String [Expr]
-    | EArith Expr Bop Expr
-    | ECompare Expr Rop Expr
+    | ERepeat Term Term
+    | EBlock [Term]
+    | EWhen Term Term
+    | EIf Term Term Term
+    | EProcCall String [Term]
+    | EArith Term Bop Term
+    | ECompare Term Rop Term
     | EProcDef String [String]
     deriving (Eq, Show)
 
-isAtom :: Expr -> Bool
+isAtom :: Term -> Bool
 isAtom (ENum _) = True
 isAtom (EVar _) = True
 isAtom _ = False
 
--- instance Show Expr where
---     show = showExpr
+-- instance Show Term where
+--     show = showTerm
 
-showExpr :: Expr -> String
-showExpr e = case e of
+showTerm :: Term -> String
+showTerm e = case e of
     ENum x -> show x
     EVar v -> v
-    ERepeat e1 e2 -> intercalate " " ["repeat", showExpr e1, showExpr e2]
-    EBlock es -> intercalate " " (["begin"] ++ map showExpr es ++ ["end"])
-    EWhen e1 e2 -> intercalate " " (["when"] ++ map showExpr [e1, e2])
-    EIf e1 e2 e3 -> intercalate " " ["if", showExpr e1, "then", showExpr e2, "else", showExpr e3]
-    EProcCall proc vs -> intercalate " " ([proc] ++ map showExpr vs)
+    ERepeat e1 e2 -> intercalate " " ["repeat", showTerm e1, showTerm e2]
+    EBlock es -> intercalate " " (["begin"] ++ map showTerm es ++ ["end"])
+    EWhen e1 e2 -> intercalate " " (["when"] ++ map showTerm [e1, e2])
+    EIf e1 e2 e3 -> intercalate " " ["if", showTerm e1, "then", showTerm e2, "else", showTerm e3]
+    EProcCall proc vs -> intercalate " " ([proc] ++ map showTerm vs)
     EArith e1 op e2 -> unwords [show' e1, show op, show' e1]
         where
             show' e | isAtom e = show e
                     | otherwise = "(" ++ show e ++ ")"
     EProcDef proc vs -> unwords (proc : vs)
 
-sample1 :: Expr
+sample1 :: Term
 sample1 = ERepeat (ENum 4) (EBlock [EProcCall "fd" [ENum 200], EProcCall "lt" [ENum 90]])
 
 data Bop
@@ -75,13 +88,14 @@ ropR = (skipSpaces *> (Lt <$ string "<"))
 
 --
 
-instance Read Expr where
+instance Read Term where
     readsPrec _ = readP_to_S userInputR
 
-userInputR :: ReadP Expr
-userInputR =  exprR +++ procdefR
+userInputR :: ReadP Term
+userInputR =  termR +++ procdefR
 
-sample = unlines
+sample = unlines sample'
+sample' = 
     ["proc tree n"
     ,"if n < 5 then stop"
     ,"fd(n)"
@@ -93,59 +107,126 @@ sample = unlines
 
 {- |
 procdefR
->>> read (head (lines sample)) :: Expr
+>>> testR procdefR (sample' !! 0)
+[(EProcDef "tree" ["n"],"")]
 -}
-procdefR :: ReadP Expr
+procdefR :: ReadP Term
 procdefR = EProcDef <$> (string "proc" *> idenR) <*> many1 idenR
-
+{- |
+idenR
+>>> testR idenR " hogehoge "
+[("hogehoge"," ")]
+>>> testR idenR "hoge+huga"
+[("hoge","+huga")]
+-}
 idenR :: ReadP String
 idenR = skipSpaces *> munch1 isLetter
-
-exprR :: ReadP Expr
-exprR = ECompare <$> arithexprR <*> ropR <*> arithexprR
-
-arithexprR :: ReadP Expr
-arithexprR = EArith <$> multiveR <*> plusR <*> multiveR
-            +++ multiveR
-
-multiveR :: ReadP Expr
-multiveR = EArith <$> aexprR <*> multR <*> aexprR
-            +++ aexprR
-
-aexprR :: ReadP Expr
-aexprR = between (char '(' ) (char ')') exprR
-        +++ numR
+{- |
+TermR
+>>> testR TermR "(3+2) < 3*2"
+[(ECompare (EArith (ENum 3.0) + (ENum 2.0)) < (EArith (ENum 3.0) * (ENum 2.0)),"")]
+-}
+termR :: ReadP Term
+termR = compareR +++ arithTermR
+{- |
+compareR
+>>> testR compareR "3+2 < 3*2"
+[(ECompare (EArith (ENum 3.0) + (ENum 2.0)) < (EArith (ENum 3.0) * (ENum 2.0)),"")]
+-}
+compareR :: ReadP Term
+compareR = ECompare <$> arithTermR <*> ropR <*> arithTermR
+{- |
+arithTermR
+>>> testR arithTermR "3"
+[(ENum 3.0,"")]
+-}
+arithTermR :: ReadP Term
+arithTermR = mkBinOp <$> multiveR <*> many (pair plusR multiveR)
+{- |
+multiveR
+>>> testR multiveR "3"
+[(ENum 3.0,"")]
+-}
+multiveR :: ReadP Term
+multiveR = mkBinOp <$> aTermR <*> many (pair multR aTermR)
+{- |
+aTermR
+>>> testR aTermR "3"
+[(ENum 3.0,"")]
+-}
+aTermR :: ReadP Term
+aTermR = numR
         +++ varR
         +++ repeatR
         +++ blockR
         +++ condR
         +++ outputR
         +++ stopR
+        +++ between (char '(' ) (char ')') termR
         +++ callprocR
-
-numR :: ReadP Expr
-numR = ENum <$> (readS_to_P readFloat)
-
-varR :: ReadP Expr
+       
+{- |
+numR
+>>> testR numR "3"
+[(ENum 3.0,"")]
+>>> testR numR " 15.3 "
+[(ENum 15.3," ")]
+>>> testR numR "35"
+[(ENum 35.0,"")]
+>>> testR numR "-123.25"
+[(ENum (-123.25),"")]
+-}
+numR :: ReadP Term
+numR = ENum <$> (readS_to_P (readSigned readFloat))
+{- |
+varR
+>>> testR varR "  hoge_huga"
+[(EVar "hoge","_huga")]
+>>> testR varR "hoge2huga"
+[(EVar "hoge","2huga")]
+-}
+varR :: ReadP Term
 varR = EVar <$> idenR
- 
-repeatR :: ReadP Expr
-repeatR = ERepeat <$> (skipSpaces *> string "repeat" *> exprR) <*> exprR
+{- |[(ERepeat (ENum 4.0) (EProcCall "begin" [EVar "fd",ENum 100.0,EVar "lt",ENum 90.0]),"")]
+repeatR
+>>> testR repeatR "repeat 4 begin fd(100) lt(90) end"
+[]
+>>> testR (skipSpaces *> string "repeat" *> arithTermR) "repeat 4"
+[(ENum 4.0,"")]
+-}
+repeatR :: ReadP Term
+repeatR = ERepeat <$> (skipSpaces *> string "repeat" *> arithTermR) <*> blockR
+{- |
+blockR
+>>> testR blockR "begin fd(100) end"
+hoge
+-}
+blockR :: ReadP Term
+blockR = EBlock <$> between (skipSpaces *> string "begin") (skipSpaces *> string "end") (many1 termR)
 
-blockR :: ReadP Expr
-blockR = EBlock <$> between (string "begin") (string "end") (many1 exprR)
+condR :: ReadP Term
+condR = EIf <$> (skipSpaces *> string "if" *> termR) 
+            <*> (skipSpaces *> string "then" *> termR) 
+            <*> (skipSpaces *> string "else" *> termR)
 
-condR :: ReadP Expr
-condR = EIf <$> (skipSpaces *> string "if" *> exprR) 
-            <*> (skipSpaces *> string "then" *> exprR) 
-            <*> (skipSpaces *> string "else" *> exprR)
-
-outputR :: ReadP Expr
+outputR :: ReadP Term
 outputR = pfail
 
-stopR :: ReadP Expr
+stopR :: ReadP Term
 stopR = pfail
 
-callprocR :: ReadP Expr
-callprocR = EProcCall <$> idenR <*> many exprR
+callprocR :: ReadP Term
+callprocR = EProcCall <$> idenR <*> many termR
 
+mkBinOp :: Term -> [(Bop,Term)] -> Term
+mkBinOp = foldl phi
+    where
+        phi e (o,e') = EArith e o e'
+
+testR :: ReadP a -> String -> [(a, String)]
+testR p s = case readP_to_S p s of 
+    [] -> []
+    rs -> [minimumBy (comparing (length . snd)) rs]
+
+pair :: ReadP a -> ReadP b -> ReadP (a,b)
+pair p q = (,) <$> p <*> q 
