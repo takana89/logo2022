@@ -1,4 +1,10 @@
 :q
+:r
+:r
+:r
+:l src/World.hs
+:l src/World.hs
+:q
 :t window0
 :l src/Interact.hs 
 :q

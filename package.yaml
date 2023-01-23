@@ -29,7 +29,7 @@ dependencies:
 - main-tester
 - haskeline
 - gloss
-- parsec
+- mtl
 
 library:
   source-dirs: src

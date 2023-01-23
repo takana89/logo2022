@@ -3,6 +3,7 @@
 {-# LANGUAGE OverloadedRecordDot #-}
 module World where
 
+import Control.Monad.State
 import Data.Bool
 import Data.Maybe
 import Graphics.Gloss hiding (arc)
@@ -64,7 +65,7 @@ defaultTurtle = Turtle
               { position = (0,0)
               , direction = initdir
               , pen = Down
-              , thic = 2
+              , thic = 1
               , color = black
               , showme = True
               , curimg = rotate initdir original
@@ -81,12 +82,16 @@ data Updown
 
 --
 
-type Instruction = World -> World
+type Instruction = World -> (World, [World])
+
+wrap :: a -> [a]
+wrap x = [x]
 
 forward, fd :: Float -> Instruction
 forward d world = case world of
     World { turtle = turtle } 
-        -> world { turtle = turtle { position = (x',y') 
+        -> (,) <*> wrap
+        $  world { turtle = turtle { position = (x',y') 
                                    , curimg = translate x' y' (rotate turtle.direction turtle.selfimg)
                                    }
                  , pict = Just $ case turtle.pen of
@@ -111,7 +116,8 @@ lt = left
 right, rt :: Float -> Instruction 
 right dir world = case world of
     World { turtle = turtle } 
-        -> world { turtle = turtle { direction = newdir 
+        -> (,) <*> wrap 
+        $  world { turtle = turtle { direction = newdir 
                                    , curimg = uncurry translate turtle.position (rotate newdir turtle.selfimg)
                                    }
                  , pict = Just blank
@@ -124,7 +130,8 @@ rt = right
 setxy :: Float -> Float -> Instruction
 setxy x y world =  case world of
     World { turtle = turtle } 
-        -> world { turtle = turtle { position = (x,y) 
+        -> (,) <*> wrap 
+        $  world { turtle = turtle { position = (x,y) 
                                    , curimg = translate x y turtle.selfimg
                                    }
                  , pict = Just $ case turtle.pen of
@@ -158,14 +165,14 @@ setheading h world = case world of
             d = turtle.direction
 
 home :: Instruction
-home world = case world of
-    World { turtle = turtle } 
-        -> setheading 0 (setxy 0 0 world )
+home world = case setxy 0 0 world of
+    (w,_) -> setheading 0 w
 
 arc :: Float -> Float -> Instruction
 arc t r world = case world of
     World { turtle = turtle }
-        -> world { turtle = turtle { direction = turtle.direction + t 
+        -> (,) <*> wrap
+        $  world { turtle = turtle { direction = turtle.direction + t 
                                    , curimg = translate x y $ rotate (d+t) turtle.selfimg
                                    }
                  , pict = Just tarc 
@@ -178,39 +185,47 @@ arc t r world = case world of
 penup :: Instruction 
 penup world = case world of
     World { turtle = turtle }
-        -> world { turtle = turtle { pen = Up }
+        -> (,) <*> wrap
+        $  world { turtle = turtle { pen = Up }
                  }
 
 pendown :: Instruction 
 pendown world = case world of
     World { turtle = turtle }
-        -> world { turtle = turtle { pen = Down }
+        -> (,) <*> wrap
+        $  world { turtle = turtle { pen = Down }
                  }
 
 clean :: Instruction
-clean world = world { pict = Nothing }
+clean world = (,) <*> wrap
+            $ world { pict = Nothing }
 
 clearscreen :: Instruction
-clearscreen = clean . home
+clearscreen world = case home world of
+    (w,_) -> case clean w of
+        (w',_) -> (w',[w,w'])
 
 showturtle :: Instruction
 showturtle world = case world of
     World { turtle = turtle }
-        -> world { turtle = turtle { showme = True }}
+        -> (,) <*> wrap
+        $  world { turtle = turtle { showme = True }}
 
 hideturtle :: Instruction
 hideturtle world = case world of
     World { turtle = turtle }
-        -> world { turtle = turtle { showme = False }}
+        -> (,) <*> wrap
+        $  world { turtle = turtle { showme = False }}
 
 wrapI :: Instruction
-wrapI world = world { wrap = Wrap }
+wrapI world = (,) <*> wrap $ world { wrap = Wrap }
 
 windowI :: Instruction
-windowI world = world { wrap = Window }
+windowI world = (,) <*> wrap $ world { wrap = Window }
 
 fenceI :: Instruction
-fenceI world = world { wrap = Fence }
+fenceI world = (,) <*> wrap $ world { wrap = Fence }
+
 -- utilities
 
 newpos :: Float -> Float -> Point -> Point
@@ -273,26 +288,34 @@ step world = case world.control of
                    , instructions = tail world.instructions
                    }
     where
-        world' = head world.instructions world
+        (world',_) = head world.instructions world
 
 run :: [String] -> [Picture]
 run cs 
     = accumWorld 
     $ exec
-    $ defaultWorld { control = cs }
+    $ defaultWorld { control = replicate (2 * 4 * 20) "" ++ cs }
 
 defaultInstructions :: [Instruction]
-defaultInstructions 
-    = [ fd 200
-      , lt 90
-      , fd 190
-      , lt 90
-      , fd 180
-      , lt 90
-      , fd 170
-      , lt 90
-      , fd 160
-      ]
+-- defaultInstructions 
+--     = [ fd 200
+--       , lt 90
+--       , fd 190
+--       , lt 90
+--       , fd 180
+--       , lt 90
+--       , fd 170
+--       , lt 90
+--       , fd 160
+--       ]
+defaultInstructions
+    = concat
+    $ replicate 90
+    $ concat
+    $ replicate 4
+    [ fd 200 
+    , lt 89
+    ]
 
 type Builtin = (Arity, Procedure0)
 type Arity = Int
