@@ -10665,3 +10665,43 @@ Ok, one module loaded.
 2023-01-17 10:55:25.111253368
 >>> :q
 Leaving GHCi.
+GHCi, version 9.2.5: https://www.haskell.org/ghc/  :? for help
+Loaded GHCi configuration from /home/nanaka/logo2022/.ghci
+2023-01-23 11:11:20.927940997
+>>> :e src/Interact.hs
+   1  module Interact where
+   2  
+   3  import Control.Concurrent.Chan
+   4  import Control.Concurrent
+   5  import System.IO.Unsafe
+   6  import Graphics.Gloss
+   7  import Graphics.Gloss.Interface.IO.Animate
+   8  
+   9  genericInteract :: IO [a] -> ([b] -> IO ()) -> ([a] -> [b]) -> IO () 
+  10  genericInteract input output translate
+  11      = output . translate =<< input
+  12  
+  13  outputPictures :: Chan Picture -> [Picture] -> IO ()
+  14  outputPictures chan picts
+  15      = forkIO (writeList2Chan chan picts) >> render chan
+  16  
+  17  render :: Chan Picture -> IO ()
+  18  render chan
+  19      = animateIO
+  20          window0
+  21          white
+  22          (const (readChan chan))
+  23          (const (return ()))
+  24  
+  25  window0 = FullScreen
+Ok, no modules loaded.
+2023-01-23 11:11:39.212293583
+>>> :l src/Interact.hs 
+[1 of 1] Compiling Interact         ( src/Interact.hs, interpreted )
+Ok, one module loaded.
+2023-01-23 11:11:39.317163958
+>>> :t window0
+window0 :: Display
+2023-01-23 11:11:51.274351841
+>>> :q
+Leaving GHCi.

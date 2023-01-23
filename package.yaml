@@ -27,6 +27,7 @@ dependencies:
 - hspec
 - doctest
 - main-tester
+- haskeline
 - gloss
 - parsec
 

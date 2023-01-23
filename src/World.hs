@@ -12,20 +12,21 @@ import Graphics.Gloss.Data.Point
 import qualified Graphics.Gloss.Data.Point.Arithmetic as G
 import Graphics.Gloss.Data.Vector
 import Graphics.Gloss.Geometry.Angle
+import Syntax
 
 data World
     = World
     { control :: [String]
     , instructions :: [Instruction]
-    , acc :: Float
-    , accb :: Bool
-    , environment :: Env
+    , acc :: Value
     , turtle :: Turtle
     , pict   :: Maybe Picture 
     , wrap   :: Wrap
+    , valenv :: ValEnv
+    , procenv :: ProcEnv
+    , pictflag :: Bool
     }
 
-type Env = [(String,Float)]
 
 data Wrap
     = Wrap
@@ -36,12 +37,13 @@ data Wrap
 defaultWorld :: World
 defaultWorld = World { control = []
                      , instructions = defaultInstructions
-                     , acc = 0
-                     , accb = True
-                     , environment = []
+                     , acc = Float 0
                      , turtle = defaultTurtle 
                      , pict = Just (Pictures [defaultTurtle.curimg, blank])
                      , wrap = Wrap
+                     , valenv = []
+                     , procenv = []
+                     , pictflag = True
                      }
 
 data Turtle
@@ -62,7 +64,7 @@ defaultTurtle = Turtle
               { position = (0,0)
               , direction = initdir
               , pen = Down
-              , thic = 10
+              , thic = 2
               , color = black
               , showme = True
               , curimg = rotate initdir original
@@ -255,12 +257,12 @@ accum pict world = case world of
 
 --
 
-eval :: World -> [World]
-eval world = world : rests
+exec :: World -> [World]
+exec world = world : rests
     where 
         rests
             | final world = []
-            | otherwise = eval (step world)
+            | otherwise = exec (step world)
 
 final :: World -> Bool
 final world = null world.instructions
@@ -276,7 +278,7 @@ step world = case world.control of
 run :: [String] -> [Picture]
 run cs 
     = accumWorld 
-    $ eval
+    $ exec
     $ defaultWorld { control = cs }
 
 defaultInstructions :: [Instruction]
@@ -292,49 +294,38 @@ defaultInstructions
       , fd 160
       ]
 
-proc0s :: [(String, Instruction)]
-proc0s = [ ("home", home)
-         , ("penup", penup)
-         , ("pendown", pendown)
-         , ("clean", clean)
-         , ("clearscreen", clearscreen)
+type Builtin = (Arity, Procedure0)
+type Arity = Int
+type Procedure0 = [Float] -> Instruction
+
+proc0s :: [(String, Builtin)]
+proc0s = [ ("home", (0, const home))
+         , ("penup", (0, const penup))
+         , ("pendown", (0, const pendown))
+         , ("clean", (0, const clean))
+         , ("clearscreen", (0, const clearscreen))
          ]
-proc1s :: [(String, Float -> Instruction)]
-proc1s = [ ("fd", fd)
-         , ("forward", forward)
-         , ("bk", bk)
-         , ("back", back)
-         , ("lt", lt)
-         , ("left", left)
-         , ("rt", rt)
-         , ("right", right)
-         , ("setx", setx)
-         , ("sety", sety)
-         , ("setheading", setheading)
+proc1s :: [(String, Builtin)]
+proc1s = [ ("fd", (1, mkproc1 fd ))
+         , ("forward", (1, mkproc1 forward))
+         , ("bk", (1, mkproc1 bk))
+         , ("back", (1, mkproc1 back))
+         , ("lt", (1, mkproc1 lt))
+         , ("left", (1, mkproc1 left))
+         , ("rt", (1, mkproc1 rt))
+         , ("right", (1, mkproc1 right))
+         , ("setx", (1, mkproc1 setx))
+         , ("sety", (1, mkproc1 sety))
+         , ("setheading", (1, mkproc1 setheading))
          ]
-proc2s :: [(String, Float -> Float -> Instruction)]
-proc2s = [ ("setxy", setxy)
-         , ("arc", arc)
+    where
+        mkproc1 f [x] = f x
+proc2s :: [(String, Builtin)]
+proc2s = [ ("setxy", (2, mkproc2 setxy))
+         , ("arc", (2, mkproc2 arc))
          ]
-arity :: [(String,Int)]
-arity =  [ ("home", 0)
-         , ("penup", 0)
-         , ("pendown", 0)
-         , ("clean", 0)
-         , ("clearscreen", 0)
-         ] ++
-         [ ("fd", 1)
-         , ("foreward", 1)
-         , ("bk", 1)
-         , ("back", 1)
-         , ("lt", 1)
-         , ("left", 1)
-         , ("rt", 1)
-         , ("right", 1)
-         , ("setx", 1)
-         , ("sety", 1)
-         , ("setheading", 1)
-         ] ++
-         [ ("setxy", 2)
-         , ("arc", 2)
-         ]
+    where
+        mkproc2 g [x,y] = g x y
+
+builtins :: [(String, Builtin)]
+builtins = proc0s ++ proc1s ++ proc2s

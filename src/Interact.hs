@@ -17,7 +17,10 @@ outputPictures chan picts
 render :: Chan Picture -> IO ()
 render chan
     = animateIO
-        FullScreen
+        window0
         white
         (const (readChan chan))
         (const (return ()))
+
+window0 :: Display
+window0 = InWindow "logo2022 demo" (768,768) (768,0)

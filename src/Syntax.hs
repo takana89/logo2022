@@ -6,56 +6,62 @@ import Data.List
 import Data.Ord
 import Numeric
 import Text.ParserCombinators.ReadP
-import World
+
 
 data Toplevel
-    = Exps [Term]
+    = Exps [Expr]
     | Proc String [String]
 
 data Value
     = Float Float
     | Bool Bool
-    | Cmd [Instruction]
-    
-data Term
+
+type ProcEnv = [(String, Procedure)]
+type Procedure = ([String], Expr)
+type ValEnv = [(String,Value)]
+
+data Expr
     = ENum Float
     | EBool Bool
     | EVoid
     | EVar String
-    | ERepeat Term Term
-    | EBlock [Term]
-    | EWhen Term Term
-    | EIf Term Term Term
-    | EProcCall String [Term]
-    | EArith Term Bop Term
-    | ECompare Term Rop Term
-    | EProcDef String [String]
+    | ESeq [Expr]
+    | EIf Expr Expr Expr
+    | EApp String [Expr]
+    | EPlus Expr Expr
+    | EMinus Expr Expr
+    | EMul Expr Expr
+    | EDiv Expr Expr
+    | ELess Expr Expr
+    | EGreater Expr Expr
     deriving (Eq, Show)
 
-isAtom :: Term -> Bool
+
+{-
+isAtom :: Expr -> Bool
 isAtom (ENum _) = True
 isAtom (EVar _) = True
 isAtom _ = False
 
--- instance Show Term where
---     show = showTerm
+-- instance Show Expr where
+--     show = showExpr
 
-showTerm :: Term -> String
-showTerm e = case e of
+showExpr :: Expr -> String
+showExpr e = case e of
     ENum x -> show x
     EVar v -> v
-    ERepeat e1 e2 -> intercalate " " ["repeat", showTerm e1, showTerm e2]
-    EBlock es -> intercalate " " (["begin"] ++ map showTerm es ++ ["end"])
-    EWhen e1 e2 -> intercalate " " (["when"] ++ map showTerm [e1, e2])
-    EIf e1 e2 e3 -> intercalate " " ["if", showTerm e1, "then", showTerm e2, "else", showTerm e3]
-    EProcCall proc vs -> intercalate " " ([proc] ++ map showTerm vs)
+    ERepeat e1 e2 -> intercalate " " ["repeat", showExpr e1, showExpr e2]
+    EBlock es -> intercalate " " (["begin"] ++ map showExpr es ++ ["end"])
+    EWhen e1 e2 -> intercalate " " (["when"] ++ map showExpr [e1, e2])
+    EIf e1 e2 e3 -> intercalate " " ["if", showExpr e1, "then", showExpr e2, "else", showExpr e3]
+    EProcCall proc vs -> intercalate " " ([proc] ++ map showExpr vs)
     EArith e1 op e2 -> unwords [show' e1, show op, show' e1]
         where
             show' e | isAtom e = show e
                     | otherwise = "(" ++ show e ++ ")"
     EProcDef proc vs -> unwords (proc : vs)
 
-sample1 :: Term
+sample1 :: Expr
 sample1 = ERepeat (ENum 4) (EBlock [EProcCall "fd" [ENum 200], EProcCall "lt" [ENum 90]])
 
 data Bop
@@ -88,10 +94,10 @@ ropR = (skipSpaces *> (Lt <$ string "<"))
 
 --
 
-instance Read Term where
+instance Read Expr where
     readsPrec _ = readP_to_S userInputR
 
-userInputR :: ReadP Term
+userInputR :: ReadP Expr
 userInputR =  termR +++ procdefR
 
 sample = unlines sample'
@@ -110,7 +116,7 @@ procdefR
 >>> testR procdefR (sample' !! 0)
 [(EProcDef "tree" ["n"],"")]
 -}
-procdefR :: ReadP Term
+procdefR :: ReadP Expr
 procdefR = EProcDef <$> (string "proc" *> idenR) <*> many1 idenR
 {- |
 idenR
@@ -122,40 +128,40 @@ idenR
 idenR :: ReadP String
 idenR = skipSpaces *> munch1 isLetter
 {- |
-TermR
->>> testR TermR "(3+2) < 3*2"
+ExprR
+>>> testR ExprR "(3+2) < 3*2"
 [(ECompare (EArith (ENum 3.0) + (ENum 2.0)) < (EArith (ENum 3.0) * (ENum 2.0)),"")]
 -}
-termR :: ReadP Term
-termR = compareR +++ arithTermR
+termR :: ReadP Expr
+termR = compareR +++ arithExprR
 {- |
 compareR
 >>> testR compareR "3+2 < 3*2"
 [(ECompare (EArith (ENum 3.0) + (ENum 2.0)) < (EArith (ENum 3.0) * (ENum 2.0)),"")]
 -}
-compareR :: ReadP Term
-compareR = ECompare <$> arithTermR <*> ropR <*> arithTermR
+compareR :: ReadP Expr
+compareR = ECompare <$> arithExprR <*> ropR <*> arithExprR
 {- |
-arithTermR
->>> testR arithTermR "3"
+arithExprR
+>>> testR arithExprR "3"
 [(ENum 3.0,"")]
 -}
-arithTermR :: ReadP Term
-arithTermR = mkBinOp <$> multiveR <*> many (pair plusR multiveR)
+arithExprR :: ReadP Expr
+arithExprR = mkBinOp <$> multiveR <*> many (pair plusR multiveR)
 {- |
 multiveR
 >>> testR multiveR "3"
 [(ENum 3.0,"")]
 -}
-multiveR :: ReadP Term
-multiveR = mkBinOp <$> aTermR <*> many (pair multR aTermR)
+multiveR :: ReadP Expr
+multiveR = mkBinOp <$> aExprR <*> many (pair multR aExprR)
 {- |
-aTermR
->>> testR aTermR "3"
+aExprR
+>>> testR aExprR "3"
 [(ENum 3.0,"")]
 -}
-aTermR :: ReadP Term
-aTermR = numR
+aExprR :: ReadP Expr
+aExprR = numR
         +++ varR
         +++ repeatR
         +++ blockR
@@ -176,7 +182,7 @@ numR
 >>> testR numR "-123.25"
 [(ENum (-123.25),"")]
 -}
-numR :: ReadP Term
+numR :: ReadP Expr
 numR = ENum <$> (readS_to_P (readSigned readFloat))
 {- |
 varR
@@ -185,40 +191,40 @@ varR
 >>> testR varR "hoge2huga"
 [(EVar "hoge","2huga")]
 -}
-varR :: ReadP Term
+varR :: ReadP Expr
 varR = EVar <$> idenR
 {- |[(ERepeat (ENum 4.0) (EProcCall "begin" [EVar "fd",ENum 100.0,EVar "lt",ENum 90.0]),"")]
 repeatR
 >>> testR repeatR "repeat 4 begin fd(100) lt(90) end"
 []
->>> testR (skipSpaces *> string "repeat" *> arithTermR) "repeat 4"
+>>> testR (skipSpaces *> string "repeat" *> arithExprR) "repeat 4"
 [(ENum 4.0,"")]
 -}
-repeatR :: ReadP Term
-repeatR = ERepeat <$> (skipSpaces *> string "repeat" *> arithTermR) <*> blockR
+repeatR :: ReadP Expr
+repeatR = ERepeat <$> (skipSpaces *> string "repeat" *> arithExprR) <*> blockR
 {- |
 blockR
 >>> testR blockR "begin fd(100) end"
 hoge
 -}
-blockR :: ReadP Term
+blockR :: ReadP Expr
 blockR = EBlock <$> between (skipSpaces *> string "begin") (skipSpaces *> string "end") (many1 termR)
 
-condR :: ReadP Term
+condR :: ReadP Expr
 condR = EIf <$> (skipSpaces *> string "if" *> termR) 
             <*> (skipSpaces *> string "then" *> termR) 
             <*> (skipSpaces *> string "else" *> termR)
 
-outputR :: ReadP Term
+outputR :: ReadP Expr
 outputR = pfail
 
-stopR :: ReadP Term
+stopR :: ReadP Expr
 stopR = pfail
 
-callprocR :: ReadP Term
+callprocR :: ReadP Expr
 callprocR = EProcCall <$> idenR <*> many termR
 
-mkBinOp :: Term -> [(Bop,Term)] -> Term
+mkBinOp :: Expr -> [(Bop,Expr)] -> Expr
 mkBinOp = foldl phi
     where
         phi e (o,e') = EArith e o e'
@@ -230,3 +236,4 @@ testR p s = case readP_to_S p s of
 
 pair :: ReadP a -> ReadP b -> ReadP (a,b)
 pair p q = (,) <$> p <*> q 
+-}
