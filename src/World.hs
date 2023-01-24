@@ -294,7 +294,7 @@ run :: [String] -> [Picture]
 run cs 
     = accumWorld 
     $ exec
-    $ defaultWorld { control = replicate (2 * 4 * 20) "" ++ cs }
+    $ defaultWorld { control = repeat "" ++ cs }
 
 defaultInstructions :: [Instruction]
 -- defaultInstructions 
