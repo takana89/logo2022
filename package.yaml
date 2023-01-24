@@ -47,7 +47,7 @@ executables:
 
   experiment:
     main:                Main.hs
-    source-dirs:         experiment
+    source-dirs:         app/experiment
     dependencies:
     - logo2022
 
