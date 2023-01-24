@@ -7,7 +7,7 @@ import Numeric
 data Lexime
     = ProcId String
     | VarId String
-    | Num Double
+    | Num Float
     | Sym String
     deriving (Eq, Show)
 
@@ -16,7 +16,7 @@ lexer "" = []
 lexer ccs@(c:cs)
     | isSpace c  = lexer cs
     | isLetter c = case span isLetter ccs of
-        (proc, rs) -> ProcId proc : lexer rs
+        (procid, rs) -> ProcId procid : lexer rs
     | isDigit c  = case readFloat ccs of
         (num, rs):_ -> Num num : lexer rs
     | c == ':'   = case span isLetter cs of
