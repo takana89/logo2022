@@ -33,10 +33,10 @@ P : T -> F + T - T + B
 -}
 
 interp :: Distance -> (L,Order) -> Turtle Picture
-interp d (F,o) = forward (d*0.7^^(9-o))
-interp d (B,o) = backward (d*0.7^^(9-o))
-interp _ (P,o) = left 30
-interp _ (M,o) = right 60
+interp d (F,o) = forward (d*0.8^^(9-o))
+interp d (B,o) = backward (d*0.8^^(9-o))
+interp _ (P,o) = left 15
+interp _ (M,o) = right 30
 
 _T :: Order -> LSystem
 _T 0 = id 
@@ -45,14 +45,14 @@ _T (n+1) = _F n . _P n . _T n . _M n . _T n . _P n . _B n
 tree :: Order -> Picture
 tree n = translate (negate (2.0 ^ (n-1))) (negate (2.0 ^ (n-1)))
              $ mconcat
-             $ evalState (sequence $ map (interp 1) (_T n []))
-             $ TurtleState (0, -0.5) 0 True black
+             $ evalState (sequence $ map (interp 100) (_T n []))
+             $ TurtleState (0, 0) 0 True black
 
 displayTree :: IO ()
 displayTree = do
     { o <- read . head <$> getArgs
-    ; let fac = 2 ^^ (9 - o)
-    ; display window white $ rotate (negate 90) $ scale fac fac $ tree o
+    ; let fac = 2 ^^ (8 - o)
+    ; display window white $ translate (-150) (-50) $ rotate (negate 90) $ scale fac fac $ tree o
     }
 
 window :: Display

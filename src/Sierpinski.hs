@@ -1,4 +1,5 @@
 {-# LANGUAGE NPlusKPatterns #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module Sierpinski where
 
 import Control.Monad.State
@@ -52,13 +53,20 @@ sierpinski :: Order -> Picture
 sierpinski n = translate (negate (2.0 ^ (n-1))) (negate (2.0 ^ (n-1)))
              $ mconcat
              $ evalState (sequence $ map (interp 1) (_A n []))
-             $ TurtleState (0.5, 0.5) 0 True black
+             $ TurtleState (0,0) 0 True black
+
+sierpinski' :: Order -> [Picture]
+sierpinski' n = map (translate (negate 320) (negate 280)) 
+              $ scanl1 (<>)
+              $ evalState (sequence $ map (interp 10) (_A n []))
+              $ TurtleState (0,0) 0 True black
+
 
 displaySier :: IO ()
 displaySier = do
-    { o <- read . head <$> getArgs
-    ; let fac = 2 ^^ (9 - o)
-    ; display window white $ scale fac fac $ sierpinski o
+    { (os :: [Int]) <- map read <$> getArgs
+    ; let fac = 2 -- ^^ (9 - o)
+    ; display window white $ scale fac fac $ sierpinski 8
     }
 
 window :: Display

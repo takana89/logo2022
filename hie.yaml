@@ -1,19 +1,19 @@
 cradle:
-  stack:
-    - path: "./test/spec.hs"
-    component: "logo2022:test:logo2022-test"
-  
-    - path: "./test/LibSpec.hs"
-    component: "logo2022:test:logo2022-test"
-  
+  stack:  
     - path: "./test/doctests.hs"
     component: "logo2022:test:logo2022-doctest"
 
     - path: "./app/Main.hs"
     component: "logo2022:exe:logo2022"
 
-    - path: "./app/experiment/Main.hs"
-    component: "logo2022:exe:experiment"
+    - path: "./app/hilbert/Main.hs"
+    component: "logo2022:exe:hilbert"
+
+    - path: "./app/sier/Main.hs"
+    component: "logo2022:exe:sier"
+
+    - path: "./app/tree/Main.hs"
+    component: "logo2022:exe:tree"
 
     - path: "./src/Lib.hs"
     component: "logo2022:lib"

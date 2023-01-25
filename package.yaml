@@ -45,15 +45,21 @@ executables:
     dependencies:
     - logo2022
 
-  experiment:
+  hilbert:
     main:                Main.hs
-    source-dirs:         app/experiment
+    source-dirs:         app/hilbert
     dependencies:
     - logo2022
 
   sier:
     main:                Main.hs
     source-dirs:         app/sier
+    dependencies:
+    - logo2022
+
+  tree:
+    main:                Main.hs
+    source-dirs:         app/tree
     dependencies:
     - logo2022
 
