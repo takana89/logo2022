@@ -5,12 +5,12 @@ import Data.Char
 import Data.List
 import Data.Ord
 import Numeric
-import Text.ParserCombinators.ReadP
-
+import Lexeme
+import Parser
 
 data Toplevel
     = Exps [Expr]
-    | Proc String [String]
+    | Decl String [String]
     deriving (Eq, Show)
 
 data Value
@@ -38,283 +38,136 @@ data Expr
     | ELess Expr Expr
     | EGreater Expr Expr
     deriving (Eq, Show)
-{- |
-userinputR
->>> testR userinputR "fd(5)"
-hoge
--}
-userinputR :: ReadP [Toplevel]
-userinputR = many toplevelR
-{- |
-toplevelR
->>> testR toplevelR "fd(5)"
-hoge
--}
-toplevelR :: ReadP Toplevel
-toplevelR = expsR +++ procdefR
 
-expsR :: ReadP Toplevel
-expsR = Exps <$> many1 exprR
-{- |
-procdefR 
->>> testR procdefR " proc hoge x y "
-[(Proc "hoge" ["x","y"]," ")]
--}
-procdefR :: ReadP Toplevel
-procdefR = Proc <$> (skipSpaces *> string "proc" *> idenR) <*> many idenR
-{- |
-exprR
->>> testR exprR "(3+2) < 3*2"
-[(ECompare (EArith (ENum 3.0) + (ENum 2.0)) < (EArith (ENum 3.0) * (ENum 2.0)),"")]
--}
-exprR :: ReadP Expr
-exprR = compareR +++ arithR
+---
 
-compareR :: ReadP Expr
-compareR = (ELess <$> arithR <* (skipSpaces *> string "<") <*> arithR)
-       +++ (EGreater <$> arithR <* (skipSpaces *> string ">") <*> arithR)
+type LogoParser = Parser Lexeme
 
-arithR :: ReadP Expr
-arithR = (mkBinOp <$> multiveR <*> many (pair plusR multiveR)) +++ multiveR
-
-plusR :: ReadP String
-plusR = skipSpaces *> (string "+" +++ string "-")
-
-multiveR :: ReadP Expr
-multiveR = (mkBinOp <$> aexprR <*> many (pair multR aexprR)) +++ aexprR
-
-multR :: ReadP String
-multR = skipSpaces *> (string "*" +++ string "/")
-
-aexprR :: ReadP Expr
-aexprR = skipSpaces *> (between (char '(') (char ')') exprR)
-     +++ numR 
-     +++ varR
-     +++ repeatR
-     +++ blockR
-     +++ condR
-     +++ outputR
-     +++ stopR
-     +++ proccallR
-
-mkBinOp :: Expr -> [(String,Expr)] -> Expr
-mkBinOp = foldl phi
-    where
-        phi e ("+",e') = EPlus e e'
-        phi e ("-",e') = EMinus e e'
-        phi e ("*",e') = EMul e e'
-        phi e ("/",e') = EDiv e e'
-
-{- |
-idenR
->>> testR idenR " hogehoge "
-[("hogehoge"," ")]
->>> testR idenR "hoge+huga"
-[("hoge","+huga")]
--}
-idenR :: ReadP String
-idenR = skipSpaces *> munch1 isLetter
-
-pair :: ReadP a -> ReadP b -> ReadP (a,b)
-pair p q = (,) <$> p <*> q 
-
-testR :: ReadP a -> String -> [(a, String)]
-testR p s = case readP_to_S p s of 
-    [] -> []
-    rs -> [minimumBy (comparing (length . snd)) rs]
-
+---
 {-
-isAtom :: Expr -> Bool
-isAtom (ENum _) = True
-isAtom (EVar _) = True
-isAtom _ = False
+<userinput> ::= <toplevel>+
+<toplevel>  ::= <expr>+ | <procdef>
+<procdef>   ::= proc <procId> <varId>*
+-}
 
--- instance Show Expr where
---     show = showExpr
-
-showExpr :: Expr -> String
-showExpr e = case e of
-    ENum x -> show x
-    EVar v -> v
-    ERepeat e1 e2 -> intercalate " " ["repeat", showExpr e1, showExpr e2]
-    EBlock es -> intercalate " " (["begin"] ++ map showExpr es ++ ["end"])
-    EWhen e1 e2 -> intercalate " " (["when"] ++ map showExpr [e1, e2])
-    EIf e1 e2 e3 -> intercalate " " ["if", showExpr e1, "then", showExpr e2, "else", showExpr e3]
-    EProcCall proc vs -> intercalate " " ([proc] ++ map showExpr vs)
-    EArith e1 op e2 -> unwords [show' e1, show op, show' e1]
-        where
-            show' e | isAtom e = show e
-                    | otherwise = "(" ++ show e ++ ")"
-    EProcDef proc vs -> unwords (proc : vs)
-
-sample1 :: Expr
-sample1 = ERepeat (ENum 4) (EBlock [EProcCall "fd" [ENum 200], EProcCall "lt" [ENum 90]])
-
-data Bop
-    = Add | Sub | Mul | Div deriving (Eq)
-
-instance Show Bop where
-    show Add = "+" 
-    show Sub = "-"
-    show Mul = "*"
-    show Div = "/"
-
-plusR :: ReadP Bop
-plusR = (skipSpaces *> (Add <$ string "+"))
-    +++ (skipSpaces *> (Sub <$ string "-"))
-
-multR :: ReadP Bop
-multR = (skipSpaces *> (Mul <$ string "*"))
-    +++ (skipSpaces *> (Div <$ string "/"))
-
-data Rop
-    = Lt | Gt deriving (Eq)
-
-instance Show Rop where
-    show Lt = "<"
-    show Gt = ">"
-
-ropR :: ReadP Rop
-ropR = (skipSpaces *> (Lt <$ string "<"))
-    +++ (skipSpaces *> (Gt <$ string ">"))
-
---
-
-instance Read Expr where
-    readsPrec _ = readP_to_S userInputR
-
-userInputR :: ReadP Expr
-userInputR =  exprR +++ procdefR
-
-sample = unlines sample'
-sample' = 
-    ["proc tree n"
-    ,"if n < 5 then stop"
-    ,"fd(n)"
-    ,"lt(30) tree(product(n,0.7))"
-    ,"rt(60) tree(n * 0.7)"
-    ,"lt(30) bk(n)"
-    ,"end"
+sampleinput :: String
+sampleinput
+    = unlines
+    [ "proc tree :n"
+    , "if :n < 5 then stop"
+    , "fd(:n)"
+    , "lt(30) tree(:n * 0.7)"
+    , "rt(60) tree(:n * 0.7)"
+    , "lt(30) bk(:n)"
+    , "end"
     ]
 
-{- |
-procdefR
->>> testR procdefR (sample' !! 0)
-[(EProcDef "tree" ["n"],"")]
--}
-procdefR :: ReadP Expr
-procdefR = EProcDef <$> (string "proc" *> idenR) <*> many1 idenR
-{- |
-idenR
->>> testR idenR " hogehoge "
-[("hogehoge"," ")]
->>> testR idenR "hoge+huga"
-[("hoge","+huga")]
--}
-idenR :: ReadP String
-idenR = skipSpaces *> munch1 isLetter
-{- |
-ExprR
->>> testR ExprR "(3+2) < 3*2"
-[(ECompare (EArith (ENum 3.0) + (ENum 2.0)) < (EArith (ENum 3.0) * (ENum 2.0)),"")]
--}
-exprR :: ReadP Expr
-exprR = compareR +++ arithExprR
-{- |
-compareR
->>> testR compareR "3+2 < 3*2"
-[(ECompare (EArith (ENum 3.0) + (ENum 2.0)) < (EArith (ENum 3.0) * (ENum 2.0)),"")]
--}
-compareR :: ReadP Expr
-compareR = ECompare <$> arithExprR <*> ropR <*> arithExprR
-{- |
-arithExprR
->>> testR arithExprR "3"
-[(ENum 3.0,"")]
--}
-arithExprR :: ReadP Expr
-arithExprR = mkBinOp <$> multiveR <*> many (pair plusR multiveR)
-{- |
-multiveR
->>> testR multiveR "3"
-[(ENum 3.0,"")]
--}
-multiveR :: ReadP Expr
-multiveR = mkBinOp <$> aExprR <*> many (pair multR aExprR)
-{- |
-aExprR
->>> testR aExprR "3"
-[(ENum 3.0,"")]
--}
-aExprR :: ReadP Expr
-aExprR = numR
-        +++ varR
-        +++ repeatR
-        +++ blockR
-        +++ condR
-        +++ outputR
-        +++ stopR
-        +++ between (char '(' ) (char ')') exprR
-        +++ callprocR
--}       
-{- |
-numR
->>> testR numR "3"
-[(ENum 3.0,"")]
->>> testR numR " 15.3 "
-[(ENum 15.3," ")]
->>> testR numR "35"
-[(ENum 35.0,"")]
->>> testR numR "-123.25"
-[(ENum (-123.25),"")]
--}
-numR :: ReadP Expr
-numR = ENum <$> (readS_to_P (readSigned readFloat))
-{- |
-varR
->>> testR varR "  hoge_huga"
-[(EVar "hoge","_huga")]
->>> testR varR "hoge2huga"
-[(EVar "hoge","2huga")]
--}
-varR :: ReadP Expr
-varR = EVar <$> idenR
-{- |[(ERepeat (ENum 4.0) (EProcCall "begin" [EVar "fd",ENum 100.0,EVar "lt",ENum 90.0]),"")]
-repeatR
->>> testR repeatR "repeat 4 begin fd(100) lt(90) end"
-[]
->>> testR (skipSpaces *> string "repeat" *> arithExprR) "repeat 4"
-[(ENum 4.0,"")]
--}
-repeatR :: ReadP Expr
-repeatR = ERepeat <$> (skipSpaces *> string "repeat" *> arithR) <*> blockR
-{- |
-blockR
->>> testR blockR "begin fd(100) end"
-hoge
--}
-blockR :: ReadP Expr
-blockR = ESeq <$> between (skipSpaces *> string "begin") (skipSpaces *> string "end") (many1 exprR)
+userinputP :: LogoParser [Toplevel]
+userinputP = many1 toplevelP
 
-condR :: ReadP Expr
-condR = EIf <$> (skipSpaces *> string "if" *> exprR) 
-            <*> (skipSpaces *> string "then" *> exprR) 
-            <*> (skipSpaces *> string "else" *> exprR)
+toplevelP :: LogoParser Toplevel
+toplevelP = expsP +++ procP
 
-outputR :: ReadP Expr
-outputR = pfail
-
-stopR :: ReadP Expr
-stopR = pfail
 {- |
-proccallR
->>> testR proccallR "fd(5)"
-hoge
+procP
+>>> parse procP (lexer "proc foo :x :y")
+Proc "foo" ["x","y"]
 -}
-proccallR :: ReadP Expr
-proccallR = (EApp <$> idenR <*> ([] <$ string "()"))
-        +++ (EApp <$> idenR <* string "(" <*> arglistR)
+procP :: LogoParser Toplevel
+procP = Decl <$> (token (LxProcId "proc") *> procnameP)
+             <*> (map varName <$> munch isVarId)
 
-arglistR :: ReadP [Expr]
-arglistR = ((:[]) <$> exprR <* skipSpaces <* string ")")
-       +++ ((:) <$> exprR <* skipSpaces <* string "," <*> arglistR)
+procnameP :: LogoParser String
+procnameP = procName <$> satisfy isProcId
+
+varnameP :: LogoParser String
+varnameP = varName <$> satisfy isVarId
+
+expsP :: LogoParser Toplevel
+expsP = Exps <$> many1 exprP
+
+procdefP :: LogoParser Toplevel
+procdefP = Decl <$> (token (LxProcId "proc") *> procnameP) <*> many varnameP
+
+{-
+<userinput>   ::= <toplevel>+
+
+<toplevel>    ::= <expressions> | <procdef>
+<procdef>     ::= 'proc' <procid> <varid>*
+<expressions> ::= <expr>+ 
+
+<expr>             ::= <additive> <compare-c>
+<compare-c>        ::= { '<' | '>' } <additive> 
+                     | ε
+<additive>         ::= <multiplicative> <additive-c>*
+<additive-c>       ::= { '+' | '-' } <multiplicative>
+<multiplicative>   ::= <aexpr> <multiplicative-c>*
+<multiplicative-c> ::= { '*' | '-' } <aexpr>
+
+<aexpr> ::= '(' <expr> ')' | <number> | <variable> 
+          | <repeat-statement> | <block>
+          | <conditional-statement> | <output-statement>
+          | <stop-statement> | <procedure-call>
+
+<repeat-statement>      ::= 'repeat' <expr> <expr>
+<block>                 ::= 'begin' <expr>* 'end'
+<conditional-statement> ::= 'if' <expr> 'then' <expr> 'else' <expr>
+<output-statement>      ::= 'output' '(' expr ')'
+<stop-statement>        ::= 'stop'
+<procedure-call>        ::= <procid> '(' ')'
+                          | <procid> '(' <arglist>
+
+<arglist>               ::= <expr> ')'
+                          | <expr> ',' <arglist>
+-}
+
+exprP :: LogoParser Expr
+exprP = mkBinOp <$> additiveP <*> comparecP
+
+mkBinOp :: Expr -> [(Lexeme, Expr)] -> Expr
+mkBinOp e = foldl phi e
+    where
+        phi e (o, e1) 
+            | isSym o = case symName o of
+                "<" -> ELess e e1
+                ">" -> EGreater e e1
+                "+" -> EPlus e e1
+                "-" -> EMinus e e1
+                "*" -> EMul e e1
+                "/" -> EDiv e e1
+                _   -> error "mkBinOp: not binary operator"
+            | otherwise = error "mkBinOp: not binary operator"
+
+comparecP :: LogoParser [(Lexeme, Expr)]
+comparecP = option [] ((:[]) <$> pair (ltP +++ gtP) additiveP)
+
+ltP :: LogoParser Lexeme
+ltP = token (LxSym "<")
+
+gtP :: LogoParser Lexeme
+gtP = token (LxSym ">")
+
+additiveP :: LogoParser Expr
+additiveP = mkBinOp <$> multiplicativeP <*> additivecP
+
+additivecP :: LogoParser [(Lexeme, Expr)]
+additivecP = many (pair (plusP +++ minusP) multiplicativeP)
+
+plusP :: LogoParser Lexeme
+plusP = token (LxSym "+")
+
+minusP :: LogoParser Lexeme
+minusP = token (LxSym "-")
+
+multiplicativeP :: LogoParser Expr
+multiplicativeP = mkBinOp <$> aexprP <*>  multiplicativecP
+
+multiplicativecP :: LogoParser [(Lexeme, Expr)]
+multiplicativecP = many (pair (mulP +++ divP) aexprP)
+
+mulP, divP :: LogoParser Lexeme
+mulP = token (LxSym "*")
+divP = token (LxSym "/")
+
+aexprP :: LogoParser Expr
+aexprP = between (token (LxSym "(")) (token (LxSym ")")) exprP

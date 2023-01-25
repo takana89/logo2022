@@ -3,4 +3,4 @@ module Main where
 import Test.DocTest
 
 main :: IO ()
-main = doctest ["src/Syntax.hs"]
+main = doctest ["src/Lexeme.hs", "src/Syntax.hs"]
