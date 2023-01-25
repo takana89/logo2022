@@ -8,7 +8,6 @@ import Hilbert
 import Interact
 
 main :: IO ()
--- main = animate window white curve
 main = do
     { och <- newChan
     ; var <- newMVar blank

@@ -1,7 +1,16 @@
 module Main where
 
--- import Sierpinski
-import Tree
+import Control.Concurrent.Chan
+import Control.Concurrent.MVar
+import Interact
+import Sierpinski
 
 main :: IO ()
-main = displayTree
+main = displaySier
+{- --
+main = do
+    { och <- newChan
+    ; var <- newMVar undefined
+    ; outputPictures var och (sierpinski' 6)
+    }
+-- -}
