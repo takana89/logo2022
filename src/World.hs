@@ -294,7 +294,7 @@ run :: [String] -> [Picture]
 run cs 
     = accumWorld 
     $ exec
-    $ defaultWorld { control = repeat "" ++ cs }
+    $ defaultWorld { control = take 25 (repeat "") ++ cs }
 
 defaultInstructions :: [Instruction]
 -- defaultInstructions 
@@ -314,7 +314,7 @@ defaultInstructions
     $ concat
     $ replicate 4
     [ fd 200 
-    , lt 89
+    , lt 145
     ]
 
 type Builtin = (Arity, Procedure0)

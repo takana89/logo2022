@@ -44,7 +44,7 @@ hilbert n = translate (negate (2.0^(n-1))) (negate (2.0^(n-1)))
           
 hilbert' :: Order -> [Picture]
 hilbert' n = scanl1 (<>)
-           $ map (scale 16 16)
+           $ map (scale 8 8)
            $ map (translate (negate (2.0^(n-1))) (negate (2.0^(n-1))))
            $ filter (/= Blank)
            $ evalState (sequence $ map (interp 1) (x n []))

@@ -51,6 +51,12 @@ executables:
     dependencies:
     - logo2022
 
+  sier:
+    main:                Main.hs
+    source-dirs:         app/sier
+    dependencies:
+    - logo2022
+
 tests:
   # logo2022-test:
   #   main:                spec.hs

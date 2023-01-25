@@ -15,7 +15,7 @@ genericInteract input output translate
 
 outputPictures :: MVar Picture -> Chan Picture -> [Picture] -> IO ()
 outputPictures var chan picts
-    = forkIO (writeList2Chan chan picts) >> render' var chan
+    = forkIO (writeList2Chan chan picts) >> render var chan
 
 render :: MVar Picture -> Chan Picture -> IO ()
 render var chan

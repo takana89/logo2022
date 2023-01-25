@@ -12653,3 +12653,270 @@ Ok, one module loaded.
 2023-01-23 21:23:31.685245485
 >>> :q
 Leaving GHCi.
+GHCi, version 9.2.5: https://www.haskell.org/ghc/  :? for help
+Loaded GHCi configuration from /home/nanaka/logo2022/.ghci
+2023-01-25 20:48:16.605346576
+>>> :e src/Sierpinski.hs
+   1  {-# LANGUAGE NPlusKPatterns #-}
+   2  module Sierpinski where
+   3  
+   4  import Control.Monad.State
+   5  import Graphics.Gloss
+   6  import Graphics.Gloss.Data.ViewPort
+   7  import System.Environment
+   8  import Turtle
+   9  
+  10  type Order = Int
+  11  
+  12  data L = F | M | P deriving Eq
+  13  
+  14  instance Show L where
+  15      show F = "F"
+  16      show M = "-"
+  17      show P = "+"
+  18  
+  19  type LSystem = [L] -> [L]
+  20  
+  21  f, p, m :: LSystem
+  22  f = (F :)
+  23  p = (P :)
+  24  m = (M :)
+  25  
+  26  {-
+  27  V ： A, B
+  28  S ： +, -
+  29  ω： A
+  30  P ： (A → B−A−B), (B → A+B+A)
+  31  -}
+  32  
+  33  _A, _B :: Order -> LSystem
+  34  _A 0 = f
+  35  _A (n+1) = _B n . m . _A n . m . _B n
+  36  _B 0 = f
+  37  _B (n+1) = _A n . p . _B n . p . _A n
+  38  
+  39  fd, bk :: Distance -> Turtle Picture
+  40  fd = forward
+  41  bk = backward
+  42  lt, rt :: Direction -> Turtle Picture
+  43  lt = left
+  44  rt = right
+  45  
+  46  interp :: Distance -> L -> Turtle Picture
+  47  interp d F = fd d
+  48  interp _ P = lt 60
+  49  interp _ M = rt 60
+  50  
+  51  sierpinski :: Order -> Picture
+  52  sierpinski n = translate (negate (2.0 ^ (n-1))) (negate (2.0 ^ (n-1)))
+  53               $ mconcat
+  54               $ evalState (sequence $ map (interp 1) (_A n []))
+  55               $ TurtleState (0.5, 0.5) 0 True black
+  56  
+  57  displaySier :: IO ()
+  58  displaySier = do
+  59      { o <- read . head <$> getArgs
+  60      ; let fac = 2 ^^ (9 - o)
+  61      ; display window white $ scale fac fac $ sierpinski o
+  62      }
+  63  
+  64  window :: Display
+  65  window = InWindow "Sierpinski triangle" (800,800) (100,100)
+Ok, no modules loaded.
+2023-01-25 20:48:35.567478795
+>>> :l src/Sierpinski.hs
+[1 of 1] Compiling Sierpinski       ( src/Sierpinski.hs, interpreted )
+Ok, one module loaded.
+2023-01-25 20:48:35.820435576
+>>> displaySier
+<interactive>: Prelude.head: empty list
+<interactive>: interrupted
+<interactive>: warning: too many hs_exit()s
+free(): corrupted unsorted chunks
+GHCi, version 9.2.5: https://www.haskell.org/ghc/  :? for help
+Loaded GHCi configuration from /home/nanaka/logo2022/.ghci
+2023-01-25 20:53:29.684228304
+>>> :e src/Sierpinski.hs
+   1  {-# LANGUAGE NPlusKPatterns #-}
+   2  module Sierpinski where
+   3  
+   4  import Control.Monad.State
+   5  import Graphics.Gloss
+   6  import Graphics.Gloss.Data.ViewPort
+   7  import System.Environment
+   8  import Turtle
+   9  
+  10  type Order = Int
+  11  
+  12  data L = F | M | P deriving Eq
+  13  
+  14  instance Show L where
+  15      show F = "F"
+  16      show M = "-"
+  17      show P = "+"
+  18  
+  19  type LSystem = [L] -> [L]
+  20  
+  21  f, p, m :: LSystem
+  22  f = (F :)
+  23  p = (P :)
+  24  m = (M :)
+  25  
+  26  {-
+  27  V ： A, B
+  28  S ： +, -
+  29  ω： A
+  30  P ： (A → B−A−B), (B → A+B+A)
+  31  -}
+  32  
+  33  _A, _B :: Order -> LSystem
+  34  _A 0 = f
+  35  _A (n+1) = _B n . m . _A n . m . _B n
+  36  _B 0 = f
+  37  _B (n+1) = _A n . p . _B n . p . _A n
+  38  
+  39  fd, bk :: Distance -> Turtle Picture
+  40  fd = forward
+  41  bk = backward
+  42  lt, rt :: Direction -> Turtle Picture
+  43  lt = left
+  44  rt = right
+  45  
+  46  interp :: Distance -> L -> Turtle Picture
+  47  interp d F = fd d
+  48  interp _ P = lt 60
+  49  interp _ M = rt 60
+  50  
+  51  sierpinski :: Order -> Picture
+  52  sierpinski n = translate (negate (2.0 ^ (n-1))) (negate (2.0 ^ (n-1)))
+  53               $ mconcat
+  54               $ evalState (sequence $ map (interp 1) (_A n []))
+  55               $ TurtleState (0.5, 0.5) 0 True black
+  56  
+  57  displaySier :: IO ()
+  58  displaySier = do
+  59      { o <- read <$> getLine -- read . head <$> getArgs
+  60      ; let fac = 2 ^^ (9 - o)
+  61      ; display window white $ scale fac fac $ sierpinski o
+  62      }
+  63  
+  64  window :: Display
+  65  window = InWindow "Sierpinski triangle" (800,800) (100,100)
+Ok, no modules loaded.
+2023-01-25 20:53:45.995984815
+>>> :l src/Sierpinski.hs 
+[1 of 1] Compiling Sierpinski       ( src/Sierpinski.hs, interpreted )
+Ok, one module loaded.
+2023-01-25 20:53:46.319078591
+>>> displaySier
+3
+<interactive>: interrupted
+<interactive>: warning: too many hs_exit()s
+GHCi, version 9.2.5: https://www.haskell.org/ghc/  :? for help
+Loaded GHCi configuration from /home/nanaka/logo2022/.ghci
+2023-01-25 21:50:55.617851351
+>>> :e src/Tree.hs
+   1  module Tree where
+   2  
+   3  import Control.Monad.State
+   4  import Graphics.Gloss
+   5  import Graphics.Gloss.Data.ViewPort
+   6  import System.Environment
+   7  import Turtle
+   8  
+   9  type Order = Int
+  10  
+  11  data L = F | B | M | P deriving Eq
+  12  
+  13  instance Show L where
+  14      show F = "F"
+  15      show B = "B"
+  16      show M = "-"
+  17      show P = "+"
+  18  
+  19  type LSystem = [(L,Order)] -> [(L,Order)]
+  20  
+  21  _F, _B, _P, _M :: Order -> LSystem
+  22  _F o = ((F,o) :)
+  23  _B o = ((B,o) :)
+  24  _P o = ((P,o) :)
+  25  _M o = ((M,o) :)
+  26  
+  27  {-
+  28  V : T
+  29  S : +, -
+  30  ω : T
+  31  P : T -> F + T - T + B
+  32  -}
+  33  
+  34  interp :: Distance -> (L,Order) -> Turtle Picture
+  35  interp d (F,o) = forward (d*0.7^^(9-o))
+  36  interp d (B,o) = backward (d*0.7^^(9-o))
+  37  interp _ (P,o) = left 30
+  38  interp _ (M,o) = right 60
+  39  
+  40  _T :: Order -> LSystem
+  41  _T 0 = id 
+  42  _T (n+1) = _F n . _P n . _T n . _M n . _T n . _P n . _B n
+Ok, no modules loaded.
+2023-01-25 21:51:23.178754477
+>>> :l src/Tree.hs
+[1 of 1] Compiling Tree             ( src/Tree.hs, interpreted )
+
+src/Tree.hs:42:5: error: Parse error in pattern: n + 1
+   |
+42 | _T (n+1) = _F n . _P n . _T n . _M n . _T n . _P n . _B n
+   |     ^^^
+Failed, no modules loaded.
+2023-01-25 21:51:23.20310217
+>>> :e
+   1  {-# LANGUAGE NPlusKPatterns #-}
+   2  module Tree where
+   3  
+   4  import Control.Monad.State
+   5  import Graphics.Gloss
+   6  import Graphics.Gloss.Data.ViewPort
+   7  import System.Environment
+   8  import Turtle
+   9  
+  10  type Order = Int
+  11  
+  12  data L = F | B | M | P deriving Eq
+  13  
+  14  instance Show L where
+  15      show F = "F"
+  16      show B = "B"
+  17      show M = "-"
+  18      show P = "+"
+  19  
+  20  type LSystem = [(L,Order)] -> [(L,Order)]
+  21  
+  22  _F, _B, _P, _M :: Order -> LSystem
+  23  _F o = ((F,o) :)
+  24  _B o = ((B,o) :)
+  25  _P o = ((P,o) :)
+  26  _M o = ((M,o) :)
+  27  
+  28  {-
+  29  V : T
+  30  S : +, -
+  31  ω : T
+  32  P : T -> F + T - T + B
+  33  -}
+  34  
+  35  interp :: Distance -> (L,Order) -> Turtle Picture
+  36  interp d (F,o) = forward (d*0.7^^(9-o))
+  37  interp d (B,o) = backward (d*0.7^^(9-o))
+  38  interp _ (P,o) = left 30
+  39  interp _ (M,o) = right 60
+  40  
+  41  _T :: Order -> LSystem
+  42  _T 0 = id 
+  43  _T (n+1) = _F n . _P n . _T n . _M n . _T n . _P n . _B n
+[1 of 1] Compiling Tree             ( src/Tree.hs, interpreted )
+Ok, one module loaded.
+2023-01-25 21:52:12.946543239
+>>> _T 2 []
+[(F,1),(+,1),(F,0),(+,0),(-,0),(+,0),(B,0),(-,1),(F,0),(+,0),(-,0),(+,0),(B,0),(+,1),(B,1)]
+2023-01-25 21:52:34.332336854
+>>> 
